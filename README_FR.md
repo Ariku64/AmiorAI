@@ -11,6 +11,16 @@
 <p align="center">
   <strong>Français</strong> · <a href="README.md">English</a>
 </p>
+<p align="center">
+  <a href="https://discord.gg/aUjZNSbUBp">
+    <img src="https://img.shields.io/badge/Join%20the%20Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Join the AmiorAI Discord">
+  </a>
+</p>
+<p align="center">
+  <a href="https://buymeacoffee.com/ArikuDono">
+    <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me a Coffee" width="217" height="60">
+  </a>
+</p>
 
 <p align="center">
   Version actuelle : <strong>v40.0.5</strong> · Windows 10/11 · Apache-2.0
