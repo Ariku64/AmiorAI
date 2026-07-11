@@ -3,7 +3,7 @@
     "lang": "fr",
     "name": "Français",
     "fallback": "en",
-    "version": "40.0.4",
+    "version": "40.0.5",
     "generated": "2026-07-11T20:57:14.923808"
   },
   "nav": {
@@ -1154,6 +1154,6 @@
     "global_engine_label": "Moteur d’image global"
   },
   "meta": {
-    "version": "40.0.4"
+    "version": "40.0.5"
   }
 }

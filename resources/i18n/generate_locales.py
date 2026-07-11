@@ -212,7 +212,7 @@ def generate_locales(master_path, output_dir, dry_run=False, backup=True):
         return result
 
     os.makedirs(output_dir, exist_ok=True)
-    meta_base = {"version": "40.0.4", "generated": datetime.now().isoformat()}
+    meta_base = {"version": "40.0.5", "generated": datetime.now().isoformat()}
     meta_info = {
         "fr": {"lang": "fr", "name": "Français", "fallback": "en"},
         "en": {"lang": "en", "name": "English",  "fallback": None},

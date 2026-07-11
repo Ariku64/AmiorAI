@@ -1,3 +1,18 @@
+# AmiorAI — Journal des modifications
+
+## v40.0.5 — 12 juillet 2026
+
+### Documentation GitHub
+
+- Refonte complète de la page `README.md` pour présenter clairement AmiorAI avant la documentation technique.
+- Ajout d’un résumé des fonctions, d’une installation rapide, d’un premier parcours utilisateur et d’un guide d’utilisation quotidien.
+- Ajout de `README_FR.md`, documentation française complète accessible depuis la page principale.
+- Documentation détaillée de LM Studio, ComfyUI, Krea 2, Flux 2 Klein, Chatterbox, Qwen3-TTS, du bouton `▶ Écouter`, de la VRAM et du mode LAN.
+- Clarification de l’emplacement des données, de la sauvegarde, des mises à jour et des exclusions Git.
+- Aucun changement fonctionnel du moteur, des conversations, des images ou du TTS.
+
+---
+
 # Changelog
 
 ## v40.0.4 — 12 juillet 2026

@@ -1,6 +1,6 @@
 # AmiorAI i18n — Internationalisation
 
-Version 40.0.4 — Système de traduction complet (FR/EN/ES/DE)
+Version 40.0.5 — Système de traduction complet (FR/EN/ES/DE)
 
 ---
 

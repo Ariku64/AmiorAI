@@ -1,4 +1,4 @@
-# AmiorAI v40.0.4 — local voice engines
+# AmiorAI v40.0.5 — local voice engines
 
 This folder contains the shared local TTS server and two isolated installers.
 

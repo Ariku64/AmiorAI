@@ -1,5 +1,7 @@
 # AmiorAI quick start
 
+English: [`README.md`](../README.md) · Français : [`README_FR.md`](../README_FR.md)
+
 For complete setup instructions, model folders and troubleshooting, read the root `README.md`.
 
 ## 1. Accept the legal notice
