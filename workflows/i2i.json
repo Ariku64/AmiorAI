@@ -1,0 +1,333 @@
+{
+  "9": {
+    "inputs": {
+      "filename_prefix": "Flux2-Klein/edit1",
+      "images": [
+        "106",
+        0
+      ]
+    },
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "Enregistrer Image"
+    }
+  },
+  "104": {
+    "inputs": {
+      "sampler_name": "euler"
+    },
+    "class_type": "KSamplerSelect",
+    "_meta": {
+      "title": "KSamplerSelect"
+    }
+  },
+  "105": {
+    "inputs": {
+      "noise": [
+        "107",
+        0
+      ],
+      "guider": [
+        "118",
+        0
+      ],
+      "sampler": [
+        "104",
+        0
+      ],
+      "sigmas": [
+        "117",
+        0
+      ],
+      "latent_image": [
+        "112",
+        0
+      ]
+    },
+    "class_type": "SamplerCustomAdvanced",
+    "_meta": {
+      "title": "ÉchantillonneurPersonnaliséAvancé"
+    }
+  },
+  "106": {
+    "inputs": {
+      "samples": [
+        "105",
+        0
+      ],
+      "vae": [
+        "111",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "107": {
+    "inputs": {
+      "noise_seed": 20895593465789
+    },
+    "class_type": "RandomNoise",
+    "_meta": {
+      "title": "BruitAléatoire"
+    }
+  },
+  "108": {
+    "inputs": {
+      "clip_name": "qwen_3_8b_fp8mixed.safetensors",
+      "type": "flux2",
+      "device": "default"
+    },
+    "class_type": "CLIPLoader",
+    "_meta": {
+      "title": "Charger CLIP"
+    }
+  },
+  "109": {
+    "inputs": {
+      "text": "%PROMPT%",
+      "clip": [
+        "302",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Positive Prompt)"
+    }
+  },
+  "110": {
+    "inputs": {
+      "text": "%NEGATIVE%",
+      "clip": [
+        "302",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Negative Prompt)"
+    }
+  },
+  "111": {
+    "inputs": {
+      "vae_name": "flux2-vae.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Charger VAE"
+    }
+  },
+  "112": {
+    "inputs": {
+      "width": [
+        "159",
+        0
+      ],
+      "height": [
+        "160",
+        0
+      ],
+      "batch_size": 1
+    },
+    "class_type": "EmptyFlux2LatentImage",
+    "_meta": {
+      "title": "Flux vide vers latent"
+    }
+  },
+  "113": {
+    "inputs": {
+      "upscale_method": "nearest-exact",
+      "megapixels": 1,
+      "resolution_steps": 1,
+      "image": [
+        "145",
+        0
+      ]
+    },
+    "class_type": "ImageScaleToTotalPixels",
+    "_meta": {
+      "title": "Redimensionner l'image en fonction du nombre total de pixels"
+    }
+  },
+  "115": {
+    "inputs": {
+      "image": [
+        "113",
+        0
+      ]
+    },
+    "class_type": "GetImageSize",
+    "_meta": {
+      "title": "Obtenir la taille de l'image"
+    }
+  },
+  "116": {
+    "inputs": {
+      "unet_name": "BigLoveKlein3-Q5_K_M.gguf"
+    },
+    "class_type": "UnetLoaderGGUF",
+    "_meta": {
+      "title": "Unet Loader (GGUF)"
+    }
+  },
+  "117": {
+    "inputs": {
+      "steps": 4,
+      "width": [
+        "159",
+        0
+      ],
+      "height": [
+        "160",
+        0
+      ]
+    },
+    "class_type": "Flux2Scheduler",
+    "_meta": {
+      "title": "Flux2Scheduler"
+    }
+  },
+  "118": {
+    "inputs": {
+      "cfg": 1,
+      "model": [
+        "302",
+        0
+      ],
+      "positive": [
+        "138",
+        0
+      ],
+      "negative": [
+        "136",
+        0
+      ]
+    },
+    "class_type": "CFGGuider",
+    "_meta": {
+      "title": "GuideCFG"
+    }
+  },
+  "136": {
+    "inputs": {
+      "conditioning": [
+        "110",
+        0
+      ],
+      "latent": [
+        "137",
+        0
+      ]
+    },
+    "class_type": "ReferenceLatent",
+    "_meta": {
+      "title": "LatentDeRéférence"
+    }
+  },
+  "137": {
+    "inputs": {
+      "pixels": [
+        "113",
+        0
+      ],
+      "vae": [
+        "111",
+        0
+      ]
+    },
+    "class_type": "VAEEncode",
+    "_meta": {
+      "title": "VAE Encode"
+    }
+  },
+  "138": {
+    "inputs": {
+      "conditioning": [
+        "109",
+        0
+      ],
+      "latent": [
+        "137",
+        0
+      ]
+    },
+    "class_type": "ReferenceLatent",
+    "_meta": {
+      "title": "LatentDeRéférence"
+    }
+  },
+  "145": {
+    "inputs": {
+      "image": "%IMAGE%"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "Charger Image"
+    }
+  },
+  "159": {
+    "inputs": {
+      "value": [
+        "115",
+        0
+      ]
+    },
+    "class_type": "PrimitiveInt",
+    "_meta": {
+      "title": "width"
+    }
+  },
+  "160": {
+    "inputs": {
+      "value": [
+        "115",
+        1
+      ]
+    },
+    "class_type": "PrimitiveInt",
+    "_meta": {
+      "title": "height"
+    }
+  },
+  "301": {
+    "inputs": {
+      "lora_name": "",
+      "strength_model": 1.0,
+      "strength_clip": 1.0,
+      "model": [
+        "116",
+        0
+      ],
+      "clip": [
+        "108",
+        0
+      ]
+    },
+    "class_type": "LoraLoader",
+    "_meta": {
+      "title": "LoRA Slot (AmiorAI)"
+    }
+  },
+  "302": {
+    "inputs": {
+      "lora_name": "",
+      "strength_model": 1.0,
+      "strength_clip": 1.0,
+      "model": [
+        "301",
+        0
+      ],
+      "clip": [
+        "301",
+        1
+      ]
+    },
+    "class_type": "LoraLoader",
+    "_meta": {
+      "title": "LoRA Slot Secondaire (AmiorAI)"
+    }
+  }
+}

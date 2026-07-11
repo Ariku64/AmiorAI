@@ -1,0 +1,400 @@
+{
+    "175": {
+        "inputs": {
+            "conditioning": [
+                "206",
+                0
+            ],
+            "latent": [
+                "195",
+                0
+            ]
+        },
+        "class_type": "ReferenceLatent",
+        "_meta": {
+            "title": "LatentDeRéférence"
+        }
+    },
+    "176": {
+        "inputs": {
+            "clip_name": "qwen_3_8b_fp8mixed.safetensors",
+            "type": "flux2",
+            "device": "default"
+        },
+        "class_type": "CLIPLoader",
+        "_meta": {
+            "title": "Charger CLIP"
+        }
+    },
+    "177": {
+        "inputs": {
+            "noise_seed": 1058753404313250
+        },
+        "class_type": "RandomNoise",
+        "_meta": {
+            "title": "BruitAléatoire"
+        }
+    },
+    "178": {
+        "inputs": {
+            "samples": [
+                "188",
+                0
+            ],
+            "vae": [
+                "197",
+                0
+            ]
+        },
+        "class_type": "VAEDecode",
+        "_meta": {
+            "title": "VAE Decode"
+        }
+    },
+    "179": {
+        "inputs": {
+            "filename_prefix": "Flux2-Klein/img2",
+            "images": [
+                "178",
+                0
+            ]
+        },
+        "class_type": "SaveImage",
+        "_meta": {
+            "title": "Enregistrer Image"
+        }
+    },
+    "180": {
+        "inputs": {
+            "value": 768
+        },
+        "class_type": "PrimitiveInt",
+        "_meta": {
+            "title": "height"
+        }
+    },
+    "181": {
+        "inputs": {
+            "image": [
+                "202",
+                0
+            ]
+        },
+        "class_type": "GetImageSize",
+        "_meta": {
+            "title": "Obtenir la taille de l'image"
+        }
+    },
+    "182": {
+        "inputs": {
+            "cfg": 1,
+            "model": [
+                "302",
+                0
+            ],
+            "positive": [
+                "189",
+                0
+            ],
+            "negative": [
+                "192",
+                0
+            ]
+        },
+        "class_type": "CFGGuider",
+        "_meta": {
+            "title": "GuideCFG"
+        }
+    },
+    "183": {
+        "inputs": {
+            "text": "%NEGATIVE%",
+            "clip": [
+                "302",
+                1
+            ]
+        },
+        "class_type": "CLIPTextEncode",
+        "_meta": {
+            "title": "CLIP Text Encode ( Negative Prompt)"
+        }
+    },
+    "184": {
+        "inputs": {
+            "conditioning": [
+                "183",
+                0
+            ],
+            "latent": [
+                "195",
+                0
+            ]
+        },
+        "class_type": "ReferenceLatent",
+        "_meta": {
+            "title": "LatentDeRéférence"
+        }
+    },
+    "185": {
+        "inputs": {
+            "sampler_name": "euler"
+        },
+        "class_type": "KSamplerSelect",
+        "_meta": {
+            "title": "KSamplerSelect"
+        }
+    },
+    "186": {
+        "inputs": {
+            "steps": 4,
+            "width": [
+                "199",
+                0
+            ],
+            "height": [
+                "180",
+                0
+            ]
+        },
+        "class_type": "Flux2Scheduler",
+        "_meta": {
+            "title": "Flux2Scheduler"
+        }
+    },
+    "187": {
+        "inputs": {
+            "width": [
+                "199",
+                0
+            ],
+            "height": [
+                "180",
+                0
+            ],
+            "batch_size": 1
+        },
+        "class_type": "EmptyFlux2LatentImage",
+        "_meta": {
+            "title": "Flux vide vers latent"
+        }
+    },
+    "188": {
+        "inputs": {
+            "noise": [
+                "177",
+                0
+            ],
+            "guider": [
+                "182",
+                0
+            ],
+            "sampler": [
+                "185",
+                0
+            ],
+            "sigmas": [
+                "186",
+                0
+            ],
+            "latent_image": [
+                "187",
+                0
+            ]
+        },
+        "class_type": "SamplerCustomAdvanced",
+        "_meta": {
+            "title": "ÉchantillonneurPersonnaliséAvancé"
+        }
+    },
+    "189": {
+        "inputs": {
+            "conditioning": [
+                "175",
+                0
+            ],
+            "latent": [
+                "196",
+                0
+            ]
+        },
+        "class_type": "ReferenceLatent",
+        "_meta": {
+            "title": "LatentDeRéférence"
+        }
+    },
+    "192": {
+        "inputs": {
+            "conditioning": [
+                "184",
+                0
+            ],
+            "latent": [
+                "196",
+                0
+            ]
+        },
+        "class_type": "ReferenceLatent",
+        "_meta": {
+            "title": "LatentDeRéférence"
+        }
+    },
+    "195": {
+        "inputs": {
+            "pixels": [
+                "202",
+                0
+            ],
+            "vae": [
+                "197",
+                0
+            ]
+        },
+        "class_type": "VAEEncode",
+        "_meta": {
+            "title": "VAE Encode"
+        }
+    },
+    "196": {
+        "inputs": {
+            "pixels": [
+                "201",
+                0
+            ],
+            "vae": [
+                "197",
+                0
+            ]
+        },
+        "class_type": "VAEEncode",
+        "_meta": {
+            "title": "VAE Encode"
+        }
+    },
+    "197": {
+        "inputs": {
+            "vae_name": "flux2-vae.safetensors"
+        },
+        "class_type": "VAELoader",
+        "_meta": {
+            "title": "Charger VAE"
+        }
+    },
+    "199": {
+        "inputs": {
+            "value": 1344
+        },
+        "class_type": "PrimitiveInt",
+        "_meta": {
+            "title": "width"
+        }
+    },
+    "201": {
+        "inputs": {
+            "upscale_method": "nearest-exact",
+            "megapixels": 1,
+            "resolution_steps": 1,
+            "image": [
+                "209",
+                0
+            ]
+        },
+        "class_type": "ImageScaleToTotalPixels",
+        "_meta": {
+            "title": "Redimensionner l'image en fonction du nombre total de pixels"
+        }
+    },
+    "202": {
+        "inputs": {
+            "upscale_method": "nearest-exact",
+            "megapixels": 1,
+            "resolution_steps": 1,
+            "image": [
+                "208",
+                0
+            ]
+        },
+        "class_type": "ImageScaleToTotalPixels",
+        "_meta": {
+            "title": "Redimensionner l'image en fonction du nombre total de pixels"
+        }
+    },
+    "206": {
+        "inputs": {
+            "text": "%PROMPT%",
+            "clip": [
+                "302",
+                1
+            ]
+        },
+        "class_type": "CLIPTextEncode",
+        "_meta": {
+            "title": "CLIP Text Encode (Positive Prompt)"
+        }
+    },
+    "207": {
+        "inputs": {
+            "unet_name": "",
+            "weight_dtype": "default"
+        },
+        "class_type": "UNETLoader",
+        "_meta": {
+            "title": "Charger modèle de diffusion (ST)"
+        }
+    },
+    "208": {
+        "inputs": {
+            "image": "%IMAGE1%"
+        },
+        "class_type": "LoadImage",
+        "_meta": {
+            "title": "Image 1"
+        }
+    },
+    "209": {
+        "inputs": {
+            "image": "%IMAGE2%"
+        },
+        "class_type": "LoadImage",
+        "_meta": {
+            "title": "Image 2"
+        }
+    },
+    "301": {
+        "inputs": {
+            "lora_name": "",
+            "strength_model": 1.0,
+            "strength_clip": 1.0,
+            "model": [
+                "207",
+                0
+            ],
+            "clip": [
+                "176",
+                0
+            ]
+        },
+        "class_type": "LoraLoader",
+        "_meta": {
+            "title": "LoRA Slot (AmiorAI)"
+        }
+    },
+    "302": {
+        "inputs": {
+            "lora_name": "",
+            "strength_model": 1.0,
+            "strength_clip": 1.0,
+            "model": [
+                "301",
+                0
+            ],
+            "clip": [
+                "301",
+                1
+            ]
+        },
+        "class_type": "LoraLoader",
+        "_meta": {
+            "title": "LoRA Slot Secondaire (AmiorAI)"
+        }
+    }
+}

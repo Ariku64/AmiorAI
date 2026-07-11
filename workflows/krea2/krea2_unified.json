@@ -1,0 +1,201 @@
+{
+  "1": {
+    "inputs": {
+      "unet_name": "krea2_turbo_fp8_scaled.safetensors",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "Load Krea 2 diffusion model"
+    }
+  },
+  "2": {
+    "inputs": {
+      "vae_name": "qwen_image_vae.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Load VAE"
+    }
+  },
+  "11": {
+    "inputs": {
+      "clip_name": "qwen3vl_4b_fp8_scaled.safetensors",
+      "type": "krea2",
+      "device": "default"
+    },
+    "class_type": "CLIPLoader",
+    "_meta": {
+      "title": "Load Krea 2 text encoder"
+    }
+  },
+  "301": {
+    "inputs": {
+      "lora_name": "",
+      "strength_model": 1,
+      "strength_clip": 1,
+      "model": [
+        "1",
+        0
+      ],
+      "clip": [
+        "11",
+        0
+      ]
+    },
+    "class_type": "LoraLoader",
+    "_meta": {
+      "title": "Character LoRA"
+    }
+  },
+  "302": {
+    "inputs": {
+      "lora_name": "",
+      "strength_model": 0.8,
+      "strength_clip": 1,
+      "model": [
+        "301",
+        0
+      ],
+      "clip": [
+        "301",
+        1
+      ]
+    },
+    "class_type": "LoraLoader",
+    "_meta": {
+      "title": "Secondary character / user persona LoRA"
+    }
+  },
+  "3": {
+    "inputs": {
+      "text": "%PROMPT%",
+      "clip": [
+        "303",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "Encode prompt"
+    }
+  },
+  "4": {
+    "inputs": {
+      "conditioning": [
+        "3",
+        0
+      ]
+    },
+    "class_type": "ConditioningZeroOut",
+    "_meta": {
+      "title": "Zero negative conditioning"
+    }
+  },
+  "6": {
+    "inputs": {
+      "width": [
+        "7",
+        0
+      ],
+      "height": [
+        "7",
+        1
+      ],
+      "batch_size": 1
+    },
+    "class_type": "EmptyLatentImage",
+    "_meta": {
+      "title": "Empty latent image"
+    }
+  },
+  "5": {
+    "inputs": {
+      "seed": 749254394737378,
+      "steps": 8,
+      "cfg": 1,
+      "sampler_name": "euler",
+      "scheduler": "beta",
+      "denoise": 1,
+      "model": [
+        "303",
+        0
+      ],
+      "positive": [
+        "3",
+        0
+      ],
+      "negative": [
+        "4",
+        0
+      ],
+      "latent_image": [
+        "6",
+        0
+      ]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "Krea 2 sampler"
+    }
+  },
+  "8": {
+    "inputs": {
+      "samples": [
+        "5",
+        0
+      ],
+      "vae": [
+        "2",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "Decode image"
+    }
+  },
+  "15": {
+    "inputs": {
+      "filename_prefix": "AmiorAI_Krea2",
+      "images": [
+        "8",
+        0
+      ]
+    },
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "Save image"
+    }
+  },
+  "7": {
+    "inputs": {
+      "aspect_ratio": "2:3 (Portrait Photo)",
+      "megapixels": 2,
+      "multiple": 8
+    },
+    "class_type": "ResolutionSelector",
+    "_meta": {
+      "title": "Resolution Selector"
+    }
+  },
+  "303": {
+    "inputs": {
+      "lora_name": "",
+      "strength_model": 0.8,
+      "strength_clip": 0.8,
+      "model": [
+        "302",
+        0
+      ],
+      "clip": [
+        "302",
+        1
+      ]
+    },
+    "class_type": "LoraLoader",
+    "_meta": {
+      "title": "Utility style/rendering LoRA"
+    }
+  }
+}

@@ -1,0 +1,1307 @@
+<!DOCTYPE html>
+<!-- Copyright 2026 Ariku; SPDX-License-Identifier: Apache-2.0 -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AmiorAI</title>
+  <link rel="icon" type="image/png" href="/logo-icon-square.png">
+  <link rel="stylesheet" href="/style.css?v=40.0.4">
+  <link rel="stylesheet" href="/icons.css?v=40.0.4">
+  <script>
+    // Applique le theme AVANT le premier rendu (evite un flash de mauvais theme).
+    // "system" = pas d'attribut data-theme : le CSS suit alors prefers-color-scheme
+    // via la regle [data-theme="dark"] ... en fait on resout explicitement ici pour
+    // que le bouton active dans Reglages soit toujours correct des le chargement.
+    (function () {
+      try {
+        var saved = localStorage.getItem("amiorai-theme") || "dark";
+        var resolved = saved;
+        if (saved === "system") {
+          resolved = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+        }
+        document.documentElement.setAttribute("data-theme", resolved);
+        document.documentElement.setAttribute("data-theme-choice", saved);
+      } catch (e) { /* localStorage indisponible : reste sur le theme clair par defaut */ }
+    })();
+  </script>
+  <script src="/i18n.js"></script>
+  <script src="/brand.js"></script>
+</head>
+<body>
+  <!-- Gradient SVG AmiorAI — shared by all icons via fill="url(#ai-grad)" -->
+  <svg style="display:none;position:absolute;width:0;height:0" aria-hidden="true">
+    <defs>
+      <linearGradient id="ai-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%"   stop-color="#00d4ff"/>
+        <stop offset="50%"  stop-color="#3b82f6"/>
+        <stop offset="100%" stop-color="#7c3aed"/>
+      </linearGradient>
+    </defs>
+  </svg>
+  <!-- Initialization error banner — non-blocking, hidden by default -->
+  <div id="init-warning-bar" style="display:none; position:fixed; top:0; left:0; right:0; z-index:9999;
+    background:#b91c1c; color:#fff; font-size:13px; padding:8px 14px; box-shadow:0 2px 8px rgba(0,0,0,.3);">
+    <strong>AmiorAI — some modules could not be loaded :</strong>
+    <div id="init-warning-list" style="margin-top:4px;"></div>
+  </div>
+  <aside class="sidebar">
+    <div class="brand-block">
+      <div class="brand">
+        <img src="/logo-icon-square.png" alt="" class="brand-logo">
+        <span data-brand-name>AmiorAI</span>
+      </div>
+      <label class="quick-language" for="quick-lang-picker">
+        <span class="sr-only" data-i18n="settings.lang_title">Langue de l'interface</span>
+        <select id="quick-lang-picker" data-i18n-aria="settings.lang_title">
+          <option value="en">🇬🇧 English</option>
+          <option value="fr">🇫🇷 Français</option>
+          <option value="es">🇪🇸 Español</option>
+          <option value="de">🇩🇪 Deutsch</option>
+        </select>
+      </label>
+    </div>
+    <nav class="nav" aria-label="AmiorAI navigation">
+      <div class="nav-group nav-group-story">
+        <button data-view="characters" class="active"><span class="ic" data-icon="characters"></span><span data-i18n="nav.characters">Personnages</span></button>
+        <button data-view="chats"><span class="ic" data-icon="chats"></span><span data-i18n="nav.chats">Conversations</span></button>
+        <button data-view="scenarios"><span class="ic" data-icon="scenarios"></span><span data-i18n="nav.scenarios">Scénarios</span></button>
+        <button data-view="journal"><span class="ic" data-icon="journal"></span><span data-i18n="nav.journal">Journal</span></button>
+        <button data-view="gallery"><span class="ic" data-icon="gallery"></span><span data-i18n="nav.gallery">Galerie</span></button>
+        <button data-view="studio"><span class="ic" data-icon="studio"></span><span data-i18n="nav.studio">Studio Image</span></button>
+      </div>
+      <div class="nav-divider" aria-hidden="true"></div>
+      <div class="nav-group nav-group-tools">
+        <button data-view="library"><span class="ic" data-icon="library"></span><span data-i18n="nav.library">Bibliothèque</span></button>
+        <button data-view="models"><span class="ic" data-icon="models"></span><span data-i18n="nav.models">Modèles</span></button>
+        <button data-view="loras"><span class="ic" data-icon="loras"></span><span data-i18n="nav.loras">LoRA</span></button>
+        <button data-view="system"><span class="ic" data-icon="system"></span><span data-i18n="nav.system">Système</span></button>
+        <button data-view="settings"><span class="ic" data-icon="settings"></span><span data-i18n="nav.settings">Réglages</span></button>
+        <button data-view="diagnostic"><span class="ic" data-icon="diagnostic"></span><span data-i18n="nav.diagnostic">Diagnostic</span></button>
+      </div>
+    </nav>
+    <div class="global-image-engine">
+      <label for="global-image-family" data-i18n="image.global_engine_label">Global image engine</label>
+      <select id="global-image-family" data-i18n-aria="image.global_engine_label">
+        <option value="flux2_klein">Flux 2 Klein</option>
+        <option value="krea2">Krea 2</option>
+      </select>
+      <small data-i18n="image.global_engine_hint">Used by characters, chat, previews, emotions, groups and Image Studio.</small>
+    </div>
+    <div class="foot"><span data-i18n="footer.local">100% local — LM Studio + ComfyUI</span></div>
+  </aside>
+
+  <main class="main">
+    <!-- ============ PERSONNAGES ============ -->
+    <section id="view-characters" class="view active">
+      <h1 data-i18n="char.title">Characters</h1>
+      <p class="sub"><span data-i18n="char.sub">Create a character with your LLM, then generate their portrait with ComfyUI.</span>
+        <button class="btn sm ghost" id="char-import-btn" style="margin-left:8px;" data-i18n="char.import_btn">📥 Import character (JSON)</button>
+        <input type="file" id="char-import-input" accept="application/json" style="display:none;">
+      </p>
+
+      <div class="panel">
+        <h2 data-i18n="char.creation_title">Assisted creation</h2>
+        <label data-i18n="char.brief_label">Describe the idea in a few words</label>
+        <textarea id="cg-brief" placeholder="e.g. a shy astronaut who loves plants, soft and curious tone" data-i18n-placeholder="char.brief_placeholder"></textarea>
+
+        <div class="row" style="gap:12px; margin-top:8px; align-items:flex-end;">
+          <div style="flex:1; min-width:160px;"><label data-i18n="char.name_label">Nom (optionnel — sinon inventé)</label>
+            <input id="cg-name" placeholder="ex : Mia" data-i18n-placeholder="char.name_placeholder">
+          </div>
+          <div style="flex:1; min-width:200px;"><label>Age: <span id="cg-age-val">25</span> years old</label>
+            <input type="range" id="cg-age" min="18" max="80" value="25" style="width:100%;">
+          </div>
+        </div>
+
+        <label style="margin-top:14px;" data-i18n="char.config_label">Configurateur physique (optionnel — imposé au personnage et à l'avatar)</label>
+        <div id="cg-config-grid" class="row" style="gap:12px; flex-wrap:wrap;"></div>
+
+        <div class="row" style="margin-top:12px">
+          <button class="btn" id="cg-generate" data-i18n="char.generate_btn">Generate profile</button>
+          <span id="cg-status" class="hint"></span>
+        </div>
+
+        <div id="cg-form" style="display:none; margin-top:18px;">
+          <input type="hidden" id="f-id">
+          <div class="row" style="gap:14px;">
+            <div style="flex:2; min-width:200px;">
+              <label data-i18n="char.form.name_label">Name</label><input id="f-name">
+            </div>
+            <div style="flex:1; min-width:90px;">
+              <label data-i18n="char.form.age_label">Age</label><input id="f-age">
+            </div>
+            <div style="flex:1; min-width:140px;">
+              <label data-i18n="char.form.role_label">Rôle relationnel</label>
+              <input id="f-role" placeholder="ex : amant, mentor, rival, ami…" data-i18n-placeholder="char.form.role_placeholder">
+            </div>
+          </div>
+          <label data-i18n="char.form.personality_label">Personnalité</label><textarea id="f-personality"></textarea>
+          <label data-i18n="char.form.moral_limits_label">Limites morales (réactions, sujets évités — une par ligne)</label>
+          <textarea id="f-moral_limits" rows="3"
+            placeholder="ex : Je ne supporte pas qu'on crache en public.&#10;La politique m'ennuie profondément."></textarea>
+          <label data-i18n="char.form.appearance_label">Apparence</label><textarea id="f-appearance"></textarea>
+          <label data-i18n="char.form.scenario_label">Contexte / scénario</label><textarea id="f-scenario"></textarea>
+          <label data-i18n="char.form.greeting_label">Premier message (accueil)</label><textarea id="f-greeting"></textarea>
+          <label data-i18n="char.form.system_prompt_label">Role instruction (system prompt)</label><textarea id="f-system_prompt"></textarea>
+          <div id="prompt-util-panel" class="prompt-util-panel">
+            <div class="row" style="justify-content:space-between; align-items:center; gap:8px;">
+              <strong data-i18n="char.prompt_utils.title">Conversation style helpers</strong>
+              <button class="btn sm ghost" id="prompt-util-clear" type="button" data-i18n="char.prompt_utils.clear">Clear helpers</button>
+            </div>
+            <p class="hint" data-i18n="char.prompt_utils.hint">These buttons append reusable language and writing-style instructions to the character system prompt.</p>
+            <label data-i18n="char.prompt_utils.languages">Language</label>
+            <div id="prompt-util-languages" class="prompt-util-buttons"></div>
+            <label data-i18n="char.prompt_utils.styles">Writing style</label>
+            <div id="prompt-util-styles" class="prompt-util-buttons"></div>
+            <div class="row" style="gap:8px; margin-top:8px;">
+              <input id="prompt-util-custom" data-i18n-placeholder="char.prompt_utils.custom_placeholder" placeholder="Custom instruction…" style="flex:1;">
+              <button class="btn sm ghost" id="prompt-util-custom-add" type="button" data-i18n="char.prompt_utils.add">Add</button>
+            </div>
+          </div>
+          <label data-i18n="char.form.image_prompt_label">Image prompt</label><textarea id="f-image_prompt"></textarea>
+          <label data-i18n="char.form.locked_tags_label">Locked physical traits</label>
+          <input id="f-locked_tags" placeholder="e.g. a woman, curvy figure, long hair" data-i18n-placeholder="char.form.locked_tags_placeholder">
+          <label data-i18n="char.form.krea_token_label">Krea 2 identity token (character LoRA trigger word)</label>
+          <input id="f-krea_token" placeholder="e.g. ylisak" data-i18n-placeholder="char.form.krea_token_placeholder">
+          <label class="row" style="gap:8px; align-items:center; margin-top:8px;">
+            <input type="checkbox" id="f-krea_force_physical" checked style="width:auto;">
+            <span data-i18n="char.form.krea_force_physical_label">Force the physical base description in Krea 2 prompts</span>
+          </label>
+
+          <div class="row" style="margin-top:16px;">
+            <button class="btn ghost" id="cg-avatar" data-i18n="char.form.avatar_btn">Generate avatar</button>
+            <button class="btn ghost" id="cg-upload-btn" data-i18n="char.form.upload_btn">Import image…</button>
+            <input type="file" id="cg-upload" accept="image/*" style="display:none;">
+            <button class="btn" id="cg-save" data-i18n="char.form.save_btn">Save</button>
+            <button class="btn ghost" id="cg-new-char" title="Reset the form to create a new character" data-i18n="char.form.new_btn" data-i18n-title="char.form.new_title">＋ New</button>
+            <span id="cg-save-status" class="hint"></span>
+          </div>
+
+          <div id="cg-avatar-options" style="display:none; margin-top:14px;">
+            <label data-i18n="char.avatar_options.label">Options avatar (personnage enregistré)</label>
+            <div class="row">
+              <button class="btn sm" id="cg-reroll" data-i18n="char.avatar_options.reroll_btn">Reroll (nouvelle graine)</button>
+              <button class="btn sm ghost" id="cg-keepseed" data-i18n="char.avatar_options.keepseed_btn">Garder la graine</button>
+              <select id="cg-variant" style="max-width:240px;">
+                <option value="" data-i18n="char.avatar_options.variant_placeholder">Variante…</option>
+                <optgroup label="Expression">
+                  <option value="expression_sourire" data-i18n="char.avatar_options.opt_smile">Sourire</option>
+                  <option value="expression_serieux" data-i18n="char.avatar_options.opt_serious">Sérieux</option>
+                  <option value="expression_colere" data-i18n="char.avatar_options.opt_angry">Colère</option>
+                  <option value="expression_triste" data-i18n="char.avatar_options.opt_sad">Triste</option>
+                  <option value="expression_surprise" data-i18n="char.avatar_options.opt_surprised">Surprise</option>
+                </optgroup>
+                <optgroup label="Tenue">
+                  <option value="tenue_casual" data-i18n="char.avatar_options.opt_casual">Casual</option>
+                  <option value="tenue_elegante" data-i18n="char.avatar_options.opt_elegant">Élégante</option>
+                  <option value="tenue_sport" data-i18n="char.avatar_options.opt_sport">Sport</option>
+                  <option value="tenue_plage" data-i18n="char.avatar_options.opt_beach">Plage</option>
+                  <option value="tenue_hiver" data-i18n="char.avatar_options.opt_winter">Hiver</option>
+                </optgroup>
+                <optgroup label="Fond">
+                  <option value="fond_studio" data-i18n="char.avatar_options.opt_studio">Studio</option>
+                  <option value="fond_exterieur" data-i18n="char.avatar_options.opt_outdoor">Extérieur</option>
+                  <option value="fond_ville" data-i18n="char.avatar_options.opt_city">Ville</option>
+                  <option value="fond_chambre" data-i18n="char.avatar_options.opt_room">Chambre</option>
+                  <option value="fond_nuit" data-i18n="char.avatar_options.opt_night">Nuit</option>
+                </optgroup>
+              </select>
+              <button class="btn sm ghost" id="cg-variant-go" data-i18n="char.avatar_options.variant_go_btn">Générer la variante</button>
+              <span id="cg-avatar-status" class="hint"></span>
+            </div>
+          </div>
+          <div id="cg-avatar-preview" style="margin-top:14px;"></div>
+
+          <!-- Voice (sample for TTS cloning) -->
+          <div id="cg-voice" style="margin-top:18px; border-top:1px solid var(--line); padding-top:16px;">
+            <h2 style="font-size:18px;" data-i18n="char.voice.title">Voix</h2>
+            <p class="hint" data-i18n="char.voice.hint">Importe un échantillon audio propre de 6 à 20 secondes, avec une seule personne et peu de bruit. Sa voix sera utilisée localement pour faire parler ce personnage.</p>
+            <div class="row" style="gap:8px; align-items:center;">
+              <button class="btn sm ghost" id="cg-voice-upload-btn" data-i18n="char.voice.upload_btn">Importer un échantillon…</button>
+              <input type="file" id="cg-voice-upload" accept=".wav,.flac,.mp3,.m4a,.ogg,.webm,audio/*" style="display:none;">
+              <span id="cg-voice-status" class="hint"></span>
+            </div>
+            <div id="cg-voice-preview" style="margin-top:10px;"></div>
+            <label for="f-voice_transcript" style="margin-top:12px;" data-i18n="char.voice.transcript_label">Transcription exacte de l'échantillon (optionnelle)</label>
+            <textarea id="f-voice_transcript" rows="2" data-i18n-placeholder="char.voice.transcript_placeholder" placeholder="Écris exactement les mots prononcés dans l'échantillon."></textarea>
+            <p class="hint" data-i18n="char.voice.transcript_hint">Utilisée uniquement par Qwen3-TTS pour améliorer la fidélité. Chatterbox n'en a pas besoin.</p>
+          </div>
+
+          <!-- Emotion portraits -->
+          <div id="cg-emotions" style="display:none; margin-top:18px; border-top:1px solid var(--line); padding-top:16px;">
+            <h2 style="font-size:18px;" data-i18n="char.emotions.title">Portraits d'émotions</h2>
+            <p class="hint" data-i18n="char.emotions.hint">Génère un portrait par émotion depuis l'avatar principal. Ils s'affichent dynamiquement dans les conversations selon l'humeur calculée.</p>
+            <div id="emotion-grid" class="emotion-grid"></div>
+          </div>
+
+          <div id="cg-memory" style="margin-top:18px; border-top:1px solid var(--line); padding-top:16px;">
+            <h2 style="font-size:18px;" data-i18n="char.memory.title">Character memory</h2>
+
+            <div id="cg-memory-structured" style="margin-bottom:14px; display:none;">
+              <h3 style="font-size:14px; margin-bottom:8px;" data-i18n="char.memory.long_title">Mémoire longue (faits stables)</h3>
+              <div class="row" style="gap:12px; flex-wrap:wrap;">
+                <div style="flex:1; min-width:180px;"><label data-i18n="char.memory.likes_label">Aime</label><textarea id="cm-likes" rows="2" placeholder="une par ligne" data-i18n-placeholder="char.memory.likes_placeholder"></textarea></div>
+                <div style="flex:1; min-width:180px;"><label data-i18n="char.memory.dislikes_label">N'aime pas</label><textarea id="cm-dislikes" rows="2" placeholder="une par ligne" data-i18n-placeholder="char.memory.likes_placeholder"></textarea></div>
+                <div style="flex:1; min-width:180px;"><label data-i18n="char.memory.events_label">Événements importants</label><textarea id="cm-events" rows="2" placeholder="un par ligne" data-i18n-placeholder="char.memory.events_placeholder"></textarea></div>
+                <div style="flex:1; min-width:180px;"><label data-i18n="char.memory.prefs_label">Préférences de l'utilisateur apprises</label><textarea id="cm-prefs" rows="2" placeholder="une par ligne" data-i18n-placeholder="char.memory.likes_placeholder"></textarea></div>
+              </div>
+              <label style="margin-top:8px;" data-i18n="char.memory.rel_history_label">Histoire relationnelle</label>
+              <textarea id="cm-rel_history" rows="2" placeholder="résumé de la relation actuelle" data-i18n-placeholder="char.memory.rel_history_placeholder"></textarea>
+              <h3 style="font-size:14px; margin:10px 0 6px;" data-i18n="char.memory.short_title">Mémoire courte (état actuel)</h3>
+              <p class="hint" style="margin-top:-4px;" data-i18n="char.memory.short_hint">L'humeur (affection, énergie, etc.) est calculée automatiquement et visible dans la conversation — pas ici.</p>
+              <div class="row" style="gap:12px; flex-wrap:wrap;">
+                <div style="flex:1; min-width:140px;"><label data-i18n="char.memory.topic_label">Dernier sujet</label><input id="cm-topic" placeholder="auto-mis à jour" data-i18n-placeholder="char.memory.topic_placeholder"></div>
+                <div style="flex:1; min-width:180px;"><label data-i18n="char.memory.rel_state_label">État de la relation</label><input id="cm-rel_state" placeholder="ex : chaleureuse, tendue…" data-i18n-placeholder="char.memory.rel_state_placeholder"></div>
+              </div>
+              <button class="btn sm" id="cm-save" style="margin-top:8px;" data-i18n="char.memory.save_btn">Enregistrer la mémoire structurée</button>
+            </div>
+
+            <div class="row">
+              <select id="mem-kind" style="max-width:140px;">
+                <option value="long" data-i18n="char.memory.kind_long">Long terme</option>
+                <option value="short" data-i18n="char.memory.kind_short">Court terme</option>
+              </select>
+              <input id="mem-input" placeholder="Ajouter un souvenir / fait à retenir…" style="flex:1; min-width:200px;" data-i18n-placeholder="char.memory.add_placeholder">
+              <button class="btn sm" id="mem-add" data-i18n="char.memory.add_btn">Ajouter</button>
+              <button class="btn sm ghost" id="mem-summarize" data-i18n="char.memory.summarize_btn">Résumer en long terme</button>
+            </div>
+            <div id="mem-list" style="margin-top:12px;"></div>
+          </div>
+
+          <div id="cg-export" style="display:none; margin-top:16px;">
+            <button class="btn sm ghost" id="cg-export-btn" data-i18n="char.export_btn">Export this character (JSON + history)</button>
+          </div>
+        </div>
+      </div>
+
+      <h2 data-i18n="char.my_chars">My characters</h2>
+      <div id="char-grid" class="grid"></div>
+    </section>
+
+    <!-- ============ CONVERSATIONS ============ -->
+    <section id="view-chats" class="view">
+      <div class="row" style="justify-content:space-between; margin-bottom:18px;">
+        <h1 style="margin:0;" data-i18n="chat.title">Conversations</h1>
+        <button class="btn" id="new-chat" data-i18n="chat.new_btn">New conversation</button>
+      </div>
+      <div class="chatwrap">
+        <div class="chatlist" id="chat-list"></div>
+        <div class="chatpane" id="chat-pane">
+          <div class="empty" style="margin:auto;" data-i18n="chat.empty">Choose or create a conversation</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ SCENARIOS ============ -->
+    <section id="view-scenarios" class="view">
+      <h1 data-i18n="scenario.title">Créateur de scénarios</h1>
+      <p class="sub" data-i18n="scenario.sub">Crée des contextes narratifs que tu peux activer dans n'importe quelle conversation.</p>
+
+      <div class="panel">
+        <h2 data-i18n="scenario.new_title">New scenario</h2>
+        <input type="hidden" id="sc-id">
+        <div class="row" style="gap:12px; flex-wrap:wrap;">
+          <div style="flex:2; min-width:200px;"><label data-i18n="scenario.title_label">Titre</label><input id="sc-title" placeholder="ex : Nuit de pluie" data-i18n-placeholder="scenario.title_placeholder"></div>
+        </div>
+        <div class="row" style="gap:12px; flex-wrap:wrap; margin-top:8px;">
+          <div style="flex:1; min-width:140px;">
+            <label data-i18n="scenario.place_label">Lieu</label>
+            <select id="sc-place">
+              <option value="" data-i18n="common.select_placeholder">— choisir —</option>
+              <option value="apartment" data-i18n="scenario.place.apartment">🏠 Appartement</option><option value="club" data-i18n="scenario.place.club">🎵 Club</option>
+              <option value="beach" data-i18n="scenario.place.beach">🏖️ Plage</option><option value="school" data-i18n="scenario.place.school">🏫 École</option>
+              <option value="office" data-i18n="scenario.place.office">💼 Bureau</option><option value="dream" data-i18n="scenario.place.dream">💭 Rêve</option>
+              <option value="storm" data-i18n="scenario.place.storm">⛈️ Tempête</option><option value="night" data-i18n="scenario.place.night">🌃 Nuit</option>
+              <option value="date" data-i18n="scenario.place.date">🍷 Rendez-vous</option><option value="mystery" data-i18n="scenario.place.mystery">🔍 Mystère</option>
+              <option value="comfort" data-i18n="scenario.place.comfort">☕ Cocon</option><option value="drama" data-i18n="scenario.place.drama">🎭 Drama</option>
+              <option value="forest" data-i18n="scenario.place.forest">🌲 Forêt</option><option value="cafe" data-i18n="scenario.place.cafe">☕ Café</option>
+              <option value="hospital" data-i18n="scenario.place.hospital">🏥 Hôpital</option><option value="hotel" data-i18n="scenario.place.hotel">🏨 Hôtel</option>
+              <option value="rooftop" data-i18n="scenario.place.rooftop">🌆 Rooftop</option><option value="library" data-i18n="scenario.place.library">📚 Bibliothèque</option>
+              <option value="custom" data-i18n="scenario.place.custom">✏️ Personnalisé…</option>
+            </select>
+            <input id="sc-place-custom" placeholder="lieu personnalisé" data-i18n-placeholder="scenario.place_custom_placeholder" style="display:none;margin-top:4px;">
+          </div>
+          <div style="flex:1; min-width:140px;">
+            <label data-i18n="scenario.mood_label">Ambiance</label>
+            <select id="sc-mood_theme">
+              <option value="" data-i18n="common.select_placeholder">— choisir —</option>
+              <option value="romantic" data-i18n="scenario.mood.romantic">💕 Romantique</option><option value="tense" data-i18n="scenario.mood.tense">⚡ Tendu</option>
+              <option value="playful" data-i18n="scenario.mood.playful">😄 Joueur</option><option value="melancholic" data-i18n="scenario.mood.melancholic">🌧️ Mélancolique</option>
+              <option value="mysterious" data-i18n="scenario.mood.mysterious">🌫️ Mystérieux</option><option value="cozy" data-i18n="scenario.mood.cozy">🛋️ Cosy</option>
+              <option value="dangerous" data-i18n="scenario.mood.dangerous">⚠️ Dangereux</option><option value="euphoric" data-i18n="scenario.mood.euphoric">✨ Euphorique</option>
+              <option value="calm" data-i18n="scenario.mood.calm">😌 Calme</option><option value="dramatic" data-i18n="scenario.mood.dramatic">🎭 Dramatique</option>
+            </select>
+          </div>
+          <div style="flex:1; min-width:140px;">
+            <label data-i18n="scenario.theme_label">Thème</label>
+            <select id="sc-theme">
+              <option value="" data-i18n="common.select_placeholder">— choisir —</option>
+              <option value="betrayal" data-i18n="scenario.theme.betrayal">Trahison</option><option value="reunion" data-i18n="scenario.theme.reunion">Retrouvailles</option>
+              <option value="first_meeting" data-i18n="scenario.theme.first_meeting">Première rencontre</option><option value="goodbye" data-i18n="scenario.theme.goodbye">Séparation</option>
+              <option value="discovery" data-i18n="scenario.theme.discovery">Découverte</option><option value="confession" data-i18n="scenario.theme.confession">Confession</option>
+              <option value="rescue" data-i18n="scenario.theme.rescue">Sauvetage</option><option value="rivalry" data-i18n="scenario.theme.rivalry">Rivalité</option>
+              <option value="healing" data-i18n="scenario.theme.healing">Guérison</option><option value="seduction" data-i18n="scenario.theme.seduction">Séduction</option>
+            </select>
+          </div>
+          <div style="flex:1; min-width:140px;">
+            <label data-i18n="scenario.relationship_label">Relation</label>
+            <select id="sc-relationship">
+              <option value="" data-i18n="common.select_placeholder">— choisir —</option>
+              <option value="strangers" data-i18n="scenario.relationship.strangers">Inconnus</option><option value="lovers" data-i18n="scenario.relationship.lovers">Amants</option>
+              <option value="exes" data-i18n="scenario.relationship.exes">Exs</option><option value="friends" data-i18n="scenario.relationship.friends">Amis</option>
+              <option value="rivals" data-i18n="scenario.relationship.rivals">Rivaux</option><option value="colleagues" data-i18n="scenario.relationship.colleagues">Collègues</option>
+              <option value="enemies" data-i18n="scenario.relationship.enemies">Ennemis</option><option value="mentor_student" data-i18n="scenario.relationship.mentor_student">Mentor / Élève</option>
+              <option value="siblings" data-i18n="scenario.relationship.siblings">Fratrie</option><option value="boss_employee" data-i18n="scenario.relationship.boss_employee">Patron / Employé</option>
+            </select>
+          </div>
+        </div>
+        <label style="margin-top:10px;" data-i18n="scenario.goal_label">Objectif (ce que le personnage cherche)</label>
+        <input id="sc-goal" placeholder="ex : Faire avouer ses sentiments" data-i18n-placeholder="scenario.goal_placeholder">
+        <label data-i18n="scenario.conflict_label">Conflit (ce qui s'y oppose)</label>
+        <input id="sc-conflict" placeholder="ex : Il a peur d'être rejeté" data-i18n-placeholder="scenario.conflict_placeholder">
+        <label data-i18n="scenario.notes_label">Notes d'ambiance (accroche narrative)</label>
+        <textarea id="sc-notes" rows="3" placeholder="Il pleut depuis des heures. La lumière vacille. Le silence entre vous dit tout ce que les mots n'osent pas." data-i18n-placeholder="scenario.notes_placeholder"></textarea>
+        <div class="row" style="margin-top:12px; gap:8px;">
+          <button class="btn ghost" id="sc-generate" data-i18n="scenario.generate_btn">✨ Générer via LLM</button>
+          <button class="btn" id="sc-save" data-i18n="scenario.save_btn">Enregistrer</button>
+          <button class="btn sm ghost" id="sc-clear" data-i18n="scenario.clear_btn">Nouveau</button>
+          <span id="sc-status" class="hint"></span>
+        </div>
+      </div>
+
+      <h2 data-i18n="scenario.my_scenarios">My scenarios</h2>
+      <div id="scenario-list" class="scenario-list"></div>
+    </section>
+
+    <!-- ============ JOURNAL / TIMELINE ============ -->
+    <section id="view-journal" class="view">
+      <h1 data-i18n="journal.title">Journal · Timeline</h1>
+      <p class="sub" data-i18n="journal.sub">La mémoire de votre histoire commune : moments marquants, premières fois, images sauvegardées.</p>
+
+      <div class="panel">
+        <div class="row" style="gap:10px; flex-wrap:wrap; align-items:flex-end;">
+          <div style="flex:1; min-width:160px;">
+            <label data-i18n="journal.char_label">Personnage</label>
+            <select id="jr-char"><option value="" data-i18n="journal.char_all">— tous —</option></select>
+          </div>
+          <button class="btn sm" id="jr-generate" title="Générer un moment à partir des conversations récentes" data-i18n="journal.generate_btn" data-i18n-title="journal.generate_btn_title">✨ Générer un moment</button>
+          <button class="btn sm ghost" id="jr-add-manual" data-i18n="journal.add_manual_btn">+ Entrée manuelle</button>
+        </div>
+      </div>
+
+      <div id="journal-timeline" class="timeline"></div>
+    </section>
+
+    <!-- ============ GALERIE ============ -->
+    <section id="view-gallery" class="view">
+      <h1 data-i18n="gallery.title">Galerie</h1>
+      <p class="sub" data-i18n="gallery.sub">Toutes les images générées, par tes personnages.</p>
+      <div class="row" style="margin-bottom:18px;">
+        <select id="gallery-filter" style="max-width:260px;"></select>
+      </div>
+      <div id="gallery-grid" class="gallery"></div>
+    </section>
+
+    <!-- ============ STUDIO IMAGE ============ -->
+    <section id="view-studio" class="view">
+      <h1 data-i18n="studio.title">Studio Image</h1>
+      <p class="sub" data-i18n="studio.sub">Choisis une famille de modèle, un workflow, et les composants requis — l'appli vérifie la compatibilité avant de générer.</p>
+
+      <div class="panel">
+        <div class="row" style="gap:14px; align-items:flex-end;">
+          <div style="flex:1; min-width:200px;">
+            <label data-i18n="studio.family_label">Famille de workflow</label>
+            <select id="studio-family"></select>
+          </div>
+          <div style="flex:1; min-width:200px;">
+            <label data-i18n="studio.workflow_label">Workflow</label>
+            <select id="studio-workflow"></select>
+          </div>
+          <div id="studio-overall-badge"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2 data-i18n="studio.required_models_title">Modèles requis</h2>
+        <div id="studio-components"></div>
+      </div>
+
+      <div class="panel" id="studio-refs-panel" style="display:none;">
+        <h2 data-i18n="studio.refs_title">Image(s) de référence</h2>
+        <p class="hint" data-i18n="studio.refs_hint">Ce workflow a besoin d'image(s) de départ — importe-les ici avant de générer.</p>
+        <div id="studio-refs"></div>
+      </div>
+
+      <div class="panel">
+        <h2 data-i18n="studio.generation_title">Génération</h2>
+        <label data-i18n="studio.prompt_label">Prompt</label>
+        <textarea id="studio-prompt" placeholder="ex : a woman sitting in a cozy library, warm light" data-i18n-placeholder="studio.prompt_placeholder"></textarea>
+        <label data-i18n="studio.negative_label">Prompt négatif (optionnel)</label>
+        <input id="studio-negative" placeholder="blurry, low quality…" data-i18n-placeholder="studio.negative_placeholder">
+        <div class="row" style="margin-top:12px; gap:8px;">
+          <button class="btn" id="studio-generate-btn" data-i18n="studio.generate_btn">Generate</button>
+          <span id="studio-generate-status" class="hint"></span>
+        </div>
+        <div id="studio-result" style="margin-top:14px;"></div>
+      </div>
+    </section>
+
+    <!-- ============ MODEL LIBRARY ============ -->
+    <section id="view-library" class="view">
+      <h1 data-i18n="library.title">Bibliothèque de modèles</h1>
+      <p class="sub" data-i18n="library.sub">Dossiers surveillés et modèles détectés. Aucun scan automatique : ajoute un dossier puis rafraîchis.</p>
+
+      <div class="panel">
+        <h2 data-i18n="library.folders_title">Dossiers surveillés</h2>
+        <div class="row" style="gap:8px; align-items:flex-end;">
+          <div style="flex:1; min-width:240px;">
+            <label data-i18n="library.folder_label">Chemin du dossier</label>
+            <input id="library-new-folder" placeholder="ex : E:\STM\Data\Packages\ComfyUI\models" data-i18n-placeholder="library.folder_placeholder">
+          </div>
+          <div style="min-width:160px;">
+            <label data-i18n="library.kind_label">Type forcé (optionnel)</label>
+            <select id="library-new-kind">
+              <option value="" data-i18n="library.kind_auto">Détection automatique</option>
+              <option value="checkpoint" data-i18n="library.kind_checkpoint">Checkpoint</option>
+              <option value="unet" data-i18n="models.kind_unet">UNet</option>
+              <option value="vae" data-i18n="models.kind_vae">VAE</option>
+              <option value="clip" data-i18n="library.kind_clip">CLIP / Encodeur</option>
+              <option value="lora" data-i18n="nav.loras">LoRA</option>
+              <option value="controlnet" data-i18n="library.kind_controlnet">ControlNet</option>
+              <option value="video_model" data-i18n="library.kind_video">Modèle vidéo</option>
+            </select>
+          </div>
+          <button class="btn" id="library-add-folder-btn" data-i18n="library.add_btn">Add</button>
+        </div>
+        <div id="library-folders" style="margin-top:14px;"></div>
+        <div class="row" style="margin-top:10px;">
+          <button class="btn ghost" id="library-rescan-all-btn" data-i18n="library.rescan_btn">🔄 Refresh all</button>
+          <span id="library-scan-status" class="hint"></span>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Detected models <span id="library-count" class="hint"></span></h2>
+        <!-- Barre d'action batch — toujours visible, en dehors des filtres -->
+        <div style="margin-bottom:10px;">
+          <button id="library-multisel-btn" style="
+            display:inline-flex; align-items:center; gap:6px;
+            padding:7px 14px; border-radius:8px; cursor:pointer; font-size:13px; font-weight:600;
+            background:var(--panel-2,#221535); border:1px solid var(--accent); color:var(--accent);
+          " data-i18n="library.multisel_btn">☑ Sélection multiple</button>
+        </div>
+        <div class="row" style="gap:10px; margin-bottom:12px; flex-wrap:wrap;">
+          <input id="library-search" placeholder="Rechercher…" style="flex:1; min-width:180px;" data-i18n-placeholder="library.search_placeholder">
+          <select id="library-filter-kind" style="max-width:160px;">
+            <option value="" data-i18n="library.filter_kind_all">Tous les types</option>
+            <option value="checkpoint" data-i18n="library.kind_checkpoint">Checkpoint</option>
+            <option value="unet" data-i18n="models.kind_unet">UNet</option>
+            <option value="vae" data-i18n="models.kind_vae">VAE</option>
+            <option value="clip" data-i18n="library.kind_clip">CLIP / Encodeur</option>
+            <option value="lora" data-i18n="nav.loras">LoRA</option>
+            <option value="controlnet" data-i18n="library.kind_controlnet">ControlNet</option>
+            <option value="video_model" data-i18n="library.kind_video">Modèle vidéo</option>
+          </select>
+          <select id="library-filter-family" style="max-width:170px;">
+            <option value="" data-i18n="library.filter_family_all">Toutes les familles</option>
+            <option value="sd15">SD 1.5</option>
+            <option value="sdxl">SDXL</option>
+            <option value="flux">Flux</option>
+            <option value="flux2_klein">Flux Klein</option>
+            <option value="krea2">Krea 2</option>
+            <option value="zimage">Z-Image</option>
+            <option value="wan_video">Wan (video)</option>
+            <option value="ltx_video">LTX (video)</option>
+          </select>
+          <label class="row" style="gap:6px; align-items:center; margin:0;">
+            <input type="checkbox" id="library-show-incompatible" style="width:auto;">
+            <span class="hint" data-i18n="library.incompatible_label">Afficher aussi les familles incertaines</span>
+          </label>
+        </div>
+        <!-- Batch action bar — visible only in selection mode -->
+        <div id="library-batch-bar" style="display:none;" class="library-batch-bar">
+          <span id="library-batch-count" class="hint">0 sélectionné(s)</span>
+          <button class="btn ghost sm" id="library-batch-selall" data-i18n="library.batch_selall">Tout sélectionner</button>
+          <button class="btn ghost sm" id="library-batch-deselall" data-i18n="library.batch_deselall">Désélectionner</button>
+          <div style="flex:1;"></div>
+          <select id="library-batch-kind" class="select-inline" style="max-width:160px;">
+            <option value="" data-i18n="library.batch_kind_default">— type (inchangé) —</option>
+            <option value="checkpoint" data-i18n="library.kind_checkpoint">Checkpoint</option>
+            <option value="unet" data-i18n="models.kind_unet">UNet</option>
+            <option value="vae" data-i18n="models.kind_vae">VAE</option>
+            <option value="clip" data-i18n="library.kind_clip">CLIP / Encodeur</option>
+            <option value="lora" data-i18n="nav.loras">LoRA</option>
+            <option value="controlnet" data-i18n="library.kind_controlnet">ControlNet</option>
+            <option value="video_model" data-i18n="library.kind_video">Modèle vidéo</option>
+          </select>
+          <select id="library-batch-family" class="select-inline" style="max-width:160px;">
+            <option value="" data-i18n="library.batch_family_default">— famille (inchangée) —</option>
+            <option value="flux2_klein">Flux 2 Klein</option>
+            <option value="krea2">Krea 2</option>
+            <option value="flux">Flux 1</option>
+            <option value="sdxl">SDXL</option>
+            <option value="sd15">SD 1.5</option>
+            <option value="zimage">Z-Image</option>
+            <option value="pony">Pony</option>
+            <option value="illustrious">Illustrious</option>
+            <option value="wan_video">Wan</option>
+            <option value="ltx_video">LTX Video</option>
+            <option value="unknown">Inconnue</option>
+          </select>
+          <button class="btn sm" id="library-batch-apply-btn" data-i18n="library.batch_apply">Appliquer</button>
+          <button class="btn ghost sm" id="library-batch-reset-btn" title="Réinitialiser la détection automatique" data-i18n="library.batch_reset" data-i18n-title="library.batch_reset_title">↺ Réinitialiser</button>
+        </div>
+        <div id="library-files"></div>
+      </div>
+    </section>
+
+    <!-- ============ LORA MANAGER ============ -->
+    <section id="view-loras" class="view">
+      <div class="row" style="justify-content:space-between; align-items:center; margin-bottom:4px;">
+        <h1 style="margin:0;" data-i18n="lora.title">LoRA Manager</h1>
+        <div class="row gap-sm">
+          <button class="btn sm ghost" id="lora-analyze-dup-btn" title="Calculer les hashes SHA256 et détecter les fichiers identiques" data-i18n="lora.analyze_dup_btn" data-i18n-title="lora.analyze_dup_btn_title">🔍 Analyser les doublons</button>
+          <span id="lora-dup-progress" class="hint" style="font-size:11px;"></span>
+        </div>
+      </div>
+      <p class="sub" data-i18n="lora.sub">Gère ta pile LoRA active, ta bibliothèque locale et tes connexions Civitai. Les workflows et Studio Image ne sont jamais affectés par cette page.</p>
+
+      <!-- === PILE ACTIVE === -->
+      <div class="panel">
+        <div class="row" style="align-items:center; gap:10px; margin-bottom:6px;">
+          <h2 style="margin:0; flex:1;" data-i18n="lora.active_title">⚡ Pile active</h2>
+          <button class="btn sm ghost" id="lora-stack-refresh">↺</button>
+          <button class="btn sm ghost" id="lora-stack-clear-btn" title="Vider toute la pile" data-i18n="lora.stack_clear_btn" data-i18n-title="lora.stack_clear_title">🗑 Vider</button>
+        </div>
+        <p class="hint" style="margin-bottom:10px;" data-i18n="lora.active_hint">Les LoRA listées ici sont injectées dans chaque génération d'image (si « toujours actif ») ou dès que leur trigger word apparaît dans un prompt. La pile ne touche jamais Studio Image directement.</p>
+        <div id="lora-active-list"></div>
+
+        <details style="margin-top:12px;">
+          <summary class="hint" style="cursor:pointer; user-select:none;" data-i18n="lora.add_manual_summary">＋ Ajouter une LoRA manuellement à la pile</summary>
+          <div style="margin-top:10px; padding:12px; background:var(--panel-2); border-radius:10px;">
+            <div class="row" style="gap:10px; flex-wrap:wrap; align-items:flex-end;">
+              <div style="flex:2; min-width:180px;"><label data-i18n="lora.file_label">Fichier LoRA</label><input id="lora-file" placeholder="ex : detail_slider.safetensors" data-i18n-placeholder="lora.file_placeholder"></div>
+              <div style="flex:1; min-width:100px;"><label data-i18n="lora.trigger_label">Trigger word</label><input id="lora-trigger" placeholder="ex : detailed" data-i18n-placeholder="lora.trigger_placeholder"></div>
+              <div style="min-width:80px;"><label data-i18n="lora.strength_label">Force modèle</label><input id="lora-strength" type="number" min="0" max="2" step="0.05" value="0.8"></div>
+              <div style="min-width:80px;"><label data-i18n="lora.clip_strength_label">Force clip</label><input id="lora-clip-strength" type="number" min="0" max="2" step="0.05" value="1.0"></div>
+              <div style="min-width:100px;"><label data-i18n="lora.family_label">Famille</label>
+                <select id="lora-family">
+                  <option value="" data-i18n="lora.family_auto">Auto / toutes</option>
+                  <option value="flux2_klein">Flux 2 Klein</option>
+                  <option value="flux">Flux 1</option>
+                  <option value="sdxl">SDXL</option>
+                  <option value="sd15">SD 1.5</option>
+                  <option value="zimage">Z-Image</option>
+                </select>
+              </div>
+              <div style="min-width:110px;"><label data-i18n="lora.always_label">Toujours actif</label>
+                <select id="lora-always"><option value="0" data-i18n="lora.always_no">Non — par trigger</option><option value="1" data-i18n="lora.always_yes">Oui — toutes les générations</option></select>
+              </div>
+            </div>
+            <div style="margin-top:8px;"><label data-i18n="lora.note_label">Note (optionnelle)</label><input id="lora-note" placeholder="Contexte d'usage, style…" data-i18n-placeholder="lora.note_placeholder"></div>
+            <button class="btn sm" id="lora-add" style="margin-top:10px;" data-i18n="lora.add_btn">Ajouter à la pile</button>
+          </div>
+        </details>
+      </div>
+
+      <!-- === GALLERY / LORA LIBRARY === -->
+      <div class="panel">
+        <div class="row" style="align-items:center; gap:10px; margin-bottom:6px;">
+          <h2 style="margin:0; flex:1;" data-i18n="lora.lib_title">📚 Bibliothèque LoRA</h2>
+          <button class="btn sm ghost" id="lora-lib-refresh" data-i18n="lora.lib_scan_btn">↺ Scanner</button>
+        </div>
+        <p class="hint" style="margin-bottom:10px;">LoRAs detected in your model folders. Declare your folders in <b>Library → Watched folders</b>, then scan.</p>
+        <div class="row" style="gap:8px; flex-wrap:wrap; margin-bottom:12px;">
+          <input id="lora-lib-search" placeholder="🔍 Rechercher…" style="flex:2; min-width:160px;" data-i18n-placeholder="lora.lib_search_placeholder">
+          <select id="lora-lib-family" style="flex:1; min-width:120px;">
+            <option value="" data-i18n="library.filter_family_all">Toutes les familles</option>
+            <option value="flux2_klein">Flux 2 Klein</option>
+            <option value="krea2">Krea 2</option>
+            <option value="flux">Flux 1</option>
+            <option value="sdxl">SDXL</option>
+            <option value="sd15">SD 1.5</option>
+            <option value="zimage">Z-Image</option>
+          </select>
+          <select id="lora-lib-preview-filter" style="min-width:140px;">
+            <option value="" data-i18n="lora.lib_preview_all">Toutes</option>
+            <option value="with" data-i18n="lora.lib_preview_with">Avec preview</option>
+            <option value="without" data-i18n="lora.lib_preview_without">Sans preview</option>
+          </select>
+          <label class="row" style="gap:6px; align-items:center; white-space:nowrap;">
+            <input type="checkbox" id="lora-lib-favonly" style="width:auto;"> Favoris
+          </label>
+        </div>
+        <div id="lora-lib-list"></div>
+      </div>
+
+      <!-- === LoRA PRESETS === -->
+      <div class="panel">
+        <div class="row" style="align-items:center; gap:10px; margin-bottom:6px;">
+          <h2 style="margin:0; flex:1;" data-i18n="lora.presets_title">🎛 Presets LoRA</h2>
+          <button class="btn sm ghost" id="lora-preset-save-current" title="Sauvegarder la pile active comme preset" data-i18n="lora.presets_save_btn" data-i18n-title="lora.presets_save_btn_title">💾 Sauvegarder la pile</button>
+        </div>
+        <p class="hint" data-i18n="lora.presets_hint">Un preset est un snapshot de la pile active. Rappelle-le d'un clic pour retrouver une configuration complète.</p>
+        <div id="lora-presets-list"></div>
+      </div>
+
+      <!-- === CIVITAI === -->
+      <div class="panel" id="civitai-panel">
+        <div class="row" style="align-items:center; gap:10px; margin-bottom:6px;">
+          <h2 style="margin:0; flex:1;">🌐 Civitai — métadonnées &amp; previews</h2>
+          <span id="civitai-status-badge" class="lm-badge" style="font-size:11px; min-width:auto; padding:3px 10px;" data-i18n="common.unknown">—</span>
+        </div>
+        <p class="hint" style="margin-bottom:12px;" data-i18n="lora.civitai_hint">
+          Le token sert uniquement à enrichir tes LoRA locales avec leurs métadonnées Civitai et leurs previews officielles.
+          Il n'est jamais transmis au frontend après enregistrement, jamais écrit dans les logs,
+          jamais inclus dans les exports. Tous les appels Civitai passent par le serveur local.
+        </p>
+
+        <!-- Token API -->
+        <div style="background:var(--panel-2); border-radius:10px; padding:14px; margin-bottom:14px;">
+          <label style="font-weight:600; display:block; margin-bottom:6px;" data-i18n="lora.token_label">Clé API Civitai</label>
+          <p class="hint" style="margin-bottom:8px;">Génère ton token sur <a href="https://civitai.com/user/account" target="_blank" rel="noopener">civitai.com/user/account</a> → API Keys. Colle-le ici puis enregistre.</p>
+          <div class="row" style="gap:8px; align-items:center; flex-wrap:wrap;">
+            <input id="civitai-token-input" type="password" placeholder="token_xxxxxxxxxxxxxxxxxxxx"
+                   autocomplete="new-password" style="flex:1; min-width:220px; font-family:monospace;" data-i18n-placeholder="lora.token_placeholder">
+            <button class="btn sm" id="civitai-token-save" data-i18n="lora.token_save_btn">💾 Enregistrer</button>
+            <button class="btn sm ghost" id="civitai-token-test" data-i18n="lora.token_test_btn">🔌 Tester</button>
+            <button class="btn sm danger" id="civitai-token-delete" data-i18n="lora.token_delete_btn">✕ Supprimer</button>
+          </div>
+          <div id="civitai-token-status" class="hint" style="margin-top:8px;"></div>
+        </div>
+
+        <!-- Global synchronization -->
+        <div style="background:var(--panel-2); border-radius:10px; padding:14px;">
+          <div class="row" style="align-items:center; gap:10px; margin-bottom:8px;">
+            <span style="font-weight:600; flex:1;" data-i18n="lora.sync_title">Synchronisation des LoRA locales</span>
+            <button class="btn sm ghost" id="civitai-sync-btn" data-i18n="lora.sync_btn">🔄 Synchroniser…</button>
+          </div>
+          <p class="hint" data-i18n="lora.sync_hint">AmiorAI calcule le hash de chaque fichier LoRA, interroge Civitai par hash, puis met en cache les métadonnées et previews officielles. Le hash n'est recalculé que si le fichier a changé.</p>
+          <div id="civitai-sync-progress" style="display:none; margin-top:10px;">
+            <div class="hint" id="civitai-sync-msg" data-i18n="lora.sync_init">Initialisation…</div>
+            <progress id="civitai-sync-bar" value="0" max="100" style="width:100%; margin-top:6px; height:8px;"></progress>
+            <button class="btn sm ghost" id="civitai-sync-cancel" style="margin-top:6px;" data-i18n="lora.sync_cancel_btn">✕ Annuler</button>
+          </div>
+          <div id="civitai-sync-result" style="margin-top:8px;"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ SYSTEM ============ -->
+    <section id="view-system" class="view">
+      <div class="row" style="justify-content:space-between; margin-bottom:8px;">
+        <h1 style="margin:0;" data-i18n="system.title">System</h1>
+        <button class="btn ghost sm" id="sys-refresh" data-i18n="system.refresh_btn">Refresh</button>
+      </div>
+      <p class="sub" data-i18n="system.sub">État des moteurs et contrôle des process. Vérifie ici si quelque chose coince.</p>
+
+      <div class="panel">
+        <h2 data-i18n="system.health_title">État (health check)</h2>
+        <div id="sys-health">…</div>
+      </div>
+
+      <div class="panel">
+        <h2 data-i18n="system.comfy_title">ComfyUI (moteur image)</h2>
+        <div class="row">
+          <button class="btn sm" id="sys-comfy-start" data-i18n="system.comfy_start_btn">Démarrer</button>
+          <button class="btn sm ghost" id="sys-comfy-restart" data-i18n="system.comfy_restart_btn">Redémarrer</button>
+          <button class="btn sm ghost" id="sys-comfy-stop" data-i18n="system.comfy_stop_btn">Arrêter</button>
+          <button class="btn sm danger" id="sys-comfy-kill" data-i18n="system.comfy_kill_btn">Kill (process bloqué)</button>
+          <button class="btn sm ghost" id="sys-comfy-free" data-i18n="system.comfy_free_btn">Libérer la VRAM</button>
+        </div>
+        <p class="hint" data-i18n="system.comfy_hint">« Kill » force l'arrêt si ComfyUI est figé. « Libérer la VRAM » décharge ses modèles.</p>
+      </div>
+
+      <div class="panel">
+        <h2 data-i18n="system.llm_title">LLM</h2>
+        <div id="llm-state" style="margin-bottom:8px;">…</div>
+        <div id="llm-logbox" style="
+          background:#0e0a14; border:1px solid var(--line); border-radius:8px;
+          padding:10px 12px; font-family:monospace; font-size:12px;
+          line-height:1.6; color:#c8b8d8; max-height:260px; overflow-y:auto;
+          white-space:pre-wrap; word-break:break-all;
+        "><span style="color:#555" data-i18n="system.llm_idle">— en attente d'activité —</span></div>
+        <div class="row" style="margin-top:10px;">
+          <button class="btn sm" id="sys-llm-load" data-i18n="system.llm_load_btn">Charger le LLM maintenant</button>
+          <button class="btn sm ghost" id="sys-llm-free" data-i18n="system.llm_free_btn">Décharger le LLM (libère la VRAM)</button>
+        </div>
+        <p class="hint" data-i18n="system.llm_hint">Le chargement peut prendre du temps (gros modèle). Le chrono et la dernière ligne de log te confirment qu'il avance et qu'il n'est pas planté.</p>
+      </div>
+
+      <div class="panel">
+        <h2 data-i18n="system.errors_title">Erreurs récentes</h2>
+        <div id="sys-errors" class="hint" data-i18n="common.unknown">—</div>
+      </div>
+
+      <!-- Local network -->
+      <div class="panel">
+        <h2 data-i18n="system.lan_title">Réseau local</h2>
+        <p class="hint">Permet d'ouvrir AmiorAI depuis un téléphone ou une tablette sur le même réseau Wi-Fi.<br>
+        <strong>Ne crée pas d'accès depuis Internet. Ne configure pas votre box ou pare-feu.</strong></p>
+
+        <div class="row gap-sm" style="margin:12px 0 4px;">
+          <label class="row gap-sm" style="cursor:pointer;">
+            <input type="radio" name="lan_mode" value="local" id="lan-local"> Cet ordinateur uniquement
+          </label>
+          <label class="row gap-sm" style="cursor:pointer;">
+            <input type="radio" name="lan_mode" value="lan" id="lan-network"> Private local network
+          </label>
+        </div>
+
+        <div id="lan-info-box" class="panel" style="background:var(--panel-2); margin-top:12px;">
+          <div id="lan-url-display" class="hint" style="margin-bottom:6px;"></div>
+          <div id="lan-code-status" class="hint" style="font-size:12px; margin-bottom:8px;"></div>
+
+          <div class="row gap-sm" style="flex-wrap:wrap; margin-bottom:8px;">
+            <button class="btn sm ghost" id="lan-copy-url-btn" data-i18n="system.lan_copy_btn">⎘ Copier l'adresse</button>
+            <button class="btn sm ghost" id="lan-gen-code-btn" data-i18n="system.lan_gen_code_btn">🔑 Générer un code d'accès</button>
+            <button class="btn sm ghost" id="lan-revoke-btn" style="color:var(--danger);" data-i18n="system.lan_revoke_btn">⊗ Déconnecter tous les appareils LAN</button>
+          </div>
+
+          <!-- Code shown once after generation -->
+          <div id="lan-code-display" style="display:none; margin:10px 0; padding:10px 14px;
+               background:var(--panel); border:1px solid var(--line); border-radius:8px;
+               font-family:monospace; text-align:center;">
+          </div>
+          <p id="lan-code-copy-hint" class="hint" style="font-size:11px; display:none;" data-i18n="system.lan_code_hint">
+            Ce code ne sera plus affiché après rechargement de la page. Notez-le.
+          </p>
+
+          <div id="lan-sessions-count" class="hint" style="font-size:11px; margin-top:6px;"></div>
+
+          <p class="hint" style="font-size:11px; opacity:.7; margin-top:8px;">
+            Accessible only on your local network.<br>
+            Ne pas ouvrir de port sur votre box Internet.<br>
+            Shares the same database, characters, and settings as this PC.
+          </p>
+          <p id="lan-restart-note" class="hint" style="color:var(--warn); font-size:11px; margin-top:4px; display:none;" data-i18n="system.lan_restart_note">
+            ↺ Redémarrez AmiorAI pour appliquer ce changement.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ SETTINGS ============ -->
+    <section id="view-settings" class="view">
+      <h1 data-i18n="settings.title">Settings</h1>
+      <p class="sub" data-i18n="settings.sub">One program loads your LLM and image model. Everything stays on your machine.</p>
+
+      <div class="panel">
+        <h2 data-i18n="settings.appearance_title">Appearance</h2>
+        <p class="hint">Choose the appearance of <span data-brand-name>AmiorAI</span>. “System” follows Windows light/dark mode and changes automatically when you change it.</p>
+        <div class="row theme-picker" id="theme-picker">
+          <button class="theme-opt" data-theme-choice="light">
+            <span class="theme-swatch theme-swatch-light"></span>
+            <span data-i18n="settings.theme_light">Clair</span>
+          </button>
+          <button class="theme-opt" data-theme-choice="dark">
+            <span class="theme-swatch theme-swatch-dark"></span>
+            <span data-i18n="settings.theme_dark">Sombre</span>
+          </button>
+          <button class="theme-opt" data-theme-choice="system">
+            <span class="theme-swatch theme-swatch-system"></span>
+            <span data-i18n="settings.theme_system">System</span>
+          </button>
+        </div>
+        <p class="hint" style="margin-top:10px;" data-i18n="settings.saved_automatically">Applied and saved immediately.</p>
+      </div>
+
+      <!-- === LANGUE === -->
+      <div class="panel" id="lang-panel">
+        <h2 data-i18n="settings.lang_title">Interface language</h2>
+        <p class="hint" data-i18n="settings.lang_hint">Choose the interface language and the language used for character generation.</p>
+        <div class="row theme-picker" id="lang-picker" style="margin-top:8px;">
+          <button class="lang-btn" data-lang="fr">🇫🇷 Français</button>
+          <button class="lang-btn" data-lang="en">🇬🇧 English</button>
+          <button class="lang-btn" data-lang="es">🇪🇸 Español</button>
+          <button class="lang-btn" data-lang="de">🇩🇪 Deutsch</button>
+        </div>
+        <p class="hint" style="margin-top:10px;" data-i18n="settings.saved_automatically">Applied and saved immediately.</p>
+      </div>
+
+      <!-- === DEVELOPER TOOLS === -->
+      <div class="panel">
+        <h2>Developer tools</h2>
+        <label class="row" style="gap:8px; align-items:center; cursor:pointer;">
+          <input type="checkbox" id="dev-tools-toggle" style="width:auto;">
+          <span data-i18n="dev.toggle_label">Show developer tools</span>
+        </label>
+      </div>
+
+      <div class="panel" id="dev-tools-panel" style="display:none;">
+        <h2 data-i18n="dev.panel_title">Developer — Translations</h2>
+        <p class="hint" data-i18n="dev.panel_hint">These tools manage the translation master file and synchronize locale JSON files.</p>
+
+        <div id="dev-stats" class="hint" style="margin-bottom:12px;"></div>
+
+        <div class="row" style="gap:8px; flex-wrap:wrap; margin-bottom:10px;">
+          <button class="btn sm ghost" id="dev-export-xlsx" data-i18n="dev.export_btn">📤 Exporter translations_master.xlsx</button>
+          <button class="btn sm ghost" id="dev-import-xlsx-btn" data-i18n="dev.import_btn">📥 Importer translations_master.xlsx</button>
+          <input type="file" id="dev-import-xlsx-input" accept=".xlsx" style="display:none;">
+        </div>
+
+        <div class="row" style="gap:8px; flex-wrap:wrap; margin-bottom:10px;">
+          <button class="btn sm ghost" id="dev-analyze-btn" data-i18n="dev.analyze_btn">🔍 Analyze before import</button>
+          <button class="btn sm" id="dev-refresh-btn" data-i18n="dev.refresh_btn">🔄 Refresh JSON from master file</button>
+        </div>
+
+        <div class="row" style="gap:8px; flex-wrap:wrap;">
+          <button class="btn sm ghost" id="dev-reload-btn" data-i18n="dev.reload_btn">⚡ Reload translations without restart</button>
+          <button class="btn sm ghost" id="dev-restore-btn" data-i18n="dev.restore_btn">↺ Restore latest backup</button>
+        </div>
+
+        <div id="dev-analysis-result" style="margin-top:12px; display:none;" class="panel" style="background:var(--panel-2);">
+          <h3 data-i18n="dev.analysis_title" style="font-size:14px; margin-bottom:8px;">Analysis result</h3>
+          <pre id="dev-analysis-content" style="font-size:12px; white-space:pre-wrap; max-height:300px; overflow-y:auto;"></pre>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2 data-i18n="settings.persona_title">Persona (toi, le joueur)</h2>
+        <p class="hint" data-i18n="settings.persona_hint">Ton identité dans le jeu de rôle. Injectée dans chaque conversation pour que les personnages te connaissent. Ton image peut servir de référence dans les scènes de groupe.</p>
+        <label data-i18n="settings.persona_name_label">Ton nom</label>
+        <input id="s-persona_name" placeholder="ex : Alex" data-i18n-placeholder="settings.persona_name_placeholder">
+        <label data-i18n="settings.persona_desc_label">Description (who you are, your role, your appearance if you want to appear in images)</label>
+        <textarea id="s-persona_description" placeholder="ex: a 30-year-old photographer, brown hair…" data-i18n-placeholder="settings.persona_desc_placeholder"></textarea>
+        <div style="margin-top:10px; padding:10px; border:1px solid var(--line); border-radius:10px; background:var(--panel-2);">
+          <label data-i18n="settings.persona_krea_token_label">Krea persona token</label>
+          <input id="s-krea2_user_token" placeholder="optional LoRA trigger, ex: sebpersona" data-i18n-placeholder="settings.persona_krea_token_placeholder">
+          <div class="row" style="gap:10px; flex-wrap:wrap; margin-top:8px;">
+            <div style="flex:2; min-width:220px;">
+              <label data-i18n="settings.persona_krea_lora_label">Krea persona LoRA</label>
+              <select id="s-krea2_char2_lora"><option value="">— none / disabled —</option></select>
+            </div>
+            <div style="flex:1; min-width:120px;">
+              <label data-i18n="settings.persona_krea_lora_strength_label">Persona LoRA strength</label>
+              <input id="s-krea2_char2_lora_strength" type="number" min="0" max="2" step="0.05" placeholder="1.0">
+            </div>
+          </div>
+          <p class="hint" style="margin-top:6px;" data-i18n="settings.persona_krea_lora_hint">Used as Krea Character LoRA 2 for immersive “Bring this scene to life” images. Leave none to disable.</p>
+        </div>
+        <div class="row" style="margin-top:10px;">
+          <button class="btn ghost" id="persona-upload-btn" data-i18n="settings.persona_upload_btn">Importer mon image…</button>
+          <input type="file" id="persona-upload" accept="image/*" style="display:none;">
+          <button class="btn" id="persona-save" data-i18n="settings.persona_save_btn">Enregistrer ma persona</button>
+          <span id="persona-status" class="hint"></span>
+        </div>
+        <div id="persona-preview" style="margin-top:12px;"></div>
+      </div>
+
+      <div class="panel">
+        <h2 data-i18n="settings.llm_title">Moteur de langage</h2>
+        <input type="hidden" id="s-llm_backend" value="lmstudio">
+        <p class="hint" data-i18n="settings.lmstudio_only_hint">AmiorAI uses LM Studio exclusively for the conversation and utility models.</p>
+
+        <div id="llm-backend-status" class="row" style="gap:10px; margin:8px 0; align-items:center;"></div>
+        <div class="row" style="gap:8px; margin-bottom:10px;">
+          <button class="btn sm" id="llm-load-btn" data-i18n="settings.llm_load_btn">Charger</button>
+          <button class="btn sm ghost" id="llm-unload-btn" data-i18n="settings.llm_unload_btn">Décharger</button>
+          <button class="btn sm ghost" id="llm-test-btn" data-i18n="settings.llm_test_btn">Tester</button>
+          <span id="llm-action-status" class="hint"></span>
+        </div>
+
+        <div id="llm-context-panel" style="border-top:1px solid var(--line); padding-top:14px; margin-top:6px;">
+          <div class="row" style="justify-content:space-between; align-items:center;">
+            <strong data-i18n="settings.llm_context_title">Contexte maximal utilisé par AmiorAI</strong>
+            <span id="s-llm_ctx_value" class="hint">8192 tokens</span>
+          </div>
+          <div class="row" style="gap:10px; align-items:center; margin-top:8px;">
+            <span class="hint">2048</span>
+            <input type="range" id="s-llm_ctx_slider" min="2048" max="32768" step="1024" value="8192" style="flex:1;">
+            <span class="hint">32768</span>
+          </div>
+          <p class="hint" id="llm-context-backend-note" style="margin-top:6px;"></p>
+          <p class="hint" data-i18n="settings.llm_context_hint1">Cette valeur doit rester égale ou inférieure au contexte réellement configuré pour le modèle dans LM Studio.</p>
+          <div class="row" style="gap:8px; margin-top:8px; align-items:center;">
+            <button class="btn sm" id="llm-context-save-btn" data-i18n="settings.llm_context_save_btn">Enregistrer le contexte</button>
+            <span id="llm-context-status" class="hint"></span>
+          </div>
+          <div class="row" style="gap:6px; margin-top:8px;">
+            <span class="hint" data-i18n="settings.llm_context_budget">Budget estimé :</span>
+            <span id="llm-context-budget-preview" class="hint"></span>
+          </div>
+        </div>
+
+        <div id="llm-lmstudio-fields" style="display:block; border-left:2px solid var(--accent-soft); padding-left:12px; margin-top:8px;">
+          <label>LM Studio server URL</label>
+          <input id="s-lmstudio_url" placeholder="http://127.0.0.1:1234/v1">
+          <div class="row" style="gap:8px; align-items:end; flex-wrap:wrap;">
+            <div style="flex:1; min-width:260px;">
+              <label>Conversation model</label>
+              <select id="s-lmstudio_model"><option value="">— auto / only loaded model —</option></select>
+            </div>
+            <button class="btn sm ghost" id="lmstudio-refresh-models-btn" type="button">Refresh model list</button>
+          </div>
+          <p id="lmstudio-model-list-status" class="hint" style="margin-top:4px;"></p>
+          <label data-i18n="settings.util_key_label">Clé API (optionnelle)</label>
+          <input id="s-lmstudio_api_key" placeholder="vide la plupart du temps, sauf si LM Studio l'exige">
+          <p class="hint">Lance LM Studio, charge un modèle, démarre son serveur local (bouton « Start Server »), puis clique « Tester » ci-dessus.</p>
+
+          <h3 style="margin-top:16px; font-size:14px;">LM Studio VRAM management</h3>
+          <p class="hint">Before image generation, AmiorAI can unload from LM Studio only the models it configured itself (chat model and, if the utility model points to the same server, the utility model too), then reload only the model needed by the next text request. Other models loaded in LM Studio are never touched.</p>
+          <label class="row" style="gap:8px; align-items:center;">
+            <input type="checkbox" id="s-lmstudio_vram_offload_enabled" style="width:auto;">
+            <span>Free AmiorAI models before image generation</span>
+          </label>
+          <label class="row" style="gap:8px; align-items:center; margin-top:6px;">
+            <input type="checkbox" id="s-lmstudio_reload_on_demand" style="width:auto;">
+            <span>Automatically reload the required model on the next text request</span>
+          </label>
+          <label class="row" style="gap:8px; align-items:center; margin-top:6px;">
+            <input type="checkbox" id="s-comfy_vram_offload_before_lmstudio" style="width:auto;">
+            <span>Free ComfyUI before reloading an LM Studio model</span>
+          </label>
+          <label class="row" style="gap:8px; align-items:center; margin-top:6px;">
+            <input type="checkbox" id="s-lmstudio_unload_conversation_before_utility" style="width:auto;">
+            <span>Unload the conversation model before a utility task</span>
+          </label>
+          <label class="row" style="gap:8px; align-items:center; margin-top:6px;">
+            <input type="checkbox" id="s-lmstudio_unload_utility_after_use" style="width:auto;">
+            <span>Unload utility model after each task</span>
+          </label>
+          <p class="hint" style="margin-top:6px;">Prevents LM Studio from keeping both models in VRAM and pushing the chat model to CPU.</p>
+
+          <details style="margin-top:10px;">
+            <summary style="cursor:pointer; color:var(--text);">LM Studio reload delays</summary>
+            <p class="hint" style="margin-top:6px;">Increase if LM Studio does answer correctly but AmiorAI reports a false error after model switching.</p>
+            <div class="row" style="gap:12px; flex-wrap:wrap; margin-top:8px;">
+              <div style="flex:1; min-width:140px;"><label>Native load/unload timeout (s)</label><input id="s-lmstudio_native_timeout" type="number" min="5" step="1" placeholder="240"></div>
+              <div style="flex:1; min-width:140px;"><label>Text response timeout (s)</label><input id="s-lmstudio_request_timeout" type="number" min="30" step="1" placeholder="600"></div>
+              <div style="flex:1; min-width:140px;"><label>Load confirmation timeout (s)</label><input id="s-lmstudio_load_wait_timeout" type="number" min="0" step="1" placeholder="180"></div>
+              <div style="flex:1; min-width:140px;"><label>Pause after load (s)</label><input id="s-lmstudio_post_load_delay" type="number" min="0" step="0.5" placeholder="4"></div>
+              <div style="flex:1; min-width:140px;"><label>Pause after unload (s)</label><input id="s-lmstudio_post_unload_delay" type="number" min="0" step="0.5" placeholder="1.5"></div>
+              <div style="flex:1; min-width:140px;"><label>ComfyUI release confirmation (s)</label><input id="s-comfy_vram_release_timeout" type="number" min="2" step="1" placeholder="30"></div>
+              <div style="flex:1; min-width:140px;"><label>Wait for active ComfyUI job (s)</label><input id="s-comfy_busy_wait_timeout" type="number" min="10" step="1" placeholder="180"></div>
+            </div>
+            <label class="row" style="gap:8px; align-items:center; margin-top:8px;">
+              <input type="checkbox" id="s-lmstudio_retry_after_load_error" style="width:auto;">
+              <span>Retry once if LM Studio rejects a request right after loading</span>
+            </label>
+          </details>
+
+          <div id="lmstudio-vram-status" class="row" style="gap:10px; margin:10px 0; align-items:center;"></div>
+          <div class="row" style="gap:8px;">
+            <button class="btn sm ghost" id="lmstudio-vram-unload-btn">Unload now</button>
+            <span id="lmstudio-vram-unload-result" class="hint"></span>
+          </div>
+        </div>
+        <div class="row settings-section-save-row" style="margin-top:16px; gap:8px; align-items:center;">
+          <button type="button" class="btn settings-section-save" data-i18n="settings.save_section_btn">Save this section</button>
+          <span class="hint settings-section-status" aria-live="polite"></span>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2 data-i18n="settings.util_title">Modèle utilitaire (optionnel)</h2>
+        <p class="hint" data-i18n="settings.util_hint">A dedicated instruction-following model can improve structured JSON, image prompts, character creation, scenarios and memory summaries.</p>
+        <label data-i18n="settings.util_enabled_label">Activer un modèle utilitaire séparé</label>
+        <select id="s-llm_util_enabled">
+          <option value="false" data-i18n="settings.util_disabled_opt">Non — tout passe par le modèle principal</option>
+          <option value="true" data-i18n="settings.util_enabled_opt">Oui — tâches structurées sur un modèle dédié</option>
+        </select>
+        <div class="row" style="gap:14px; margin-top:8px;">
+          <div style="flex:1; min-width:220px;"><label data-i18n="settings.util_model_label">LM Studio utility model</label>
+            <select id="s-llm_util_model"><option value="">— reuse conversation model —</option></select></div>
+        </div>
+        <p class="hint" data-i18n="settings.util_same_server_hint">The utility model uses the same LM Studio server URL and API key as the conversation model.</p>
+
+        <label class="row" style="gap:8px; align-items:center; margin-top:14px;">
+          <input type="checkbox" id="s-llm_util_fallback" style="width:auto;">
+          <span data-i18n="settings.util_fallback_label">Autoriser le repli sur le modèle conversationnel si l'utilitaire est indisponible</span>
+        </label>
+        <p class="hint" style="margin-top:2px;">Disabled by default: if the utility model is enabled but unreachable, structured tasks fail with a clear message instead of silently using the roleplay model for JSON. Enable this only if you prefer a degraded result to a failure.</p>
+
+        <div id="llm-util-status" class="row" style="gap:10px; margin:10px 0; align-items:center;"></div>
+        <div class="row" style="gap:8px;">
+          <button class="btn sm" id="llm-util-test-btn" data-i18n="settings.util_test_btn">Tester le modèle utilitaire</button>
+          <span id="llm-util-test-result" class="hint"></span>
+        </div>
+        <div class="row settings-section-save-row" style="margin-top:16px; gap:8px; align-items:center;">
+          <button type="button" class="btn settings-section-save" data-i18n="settings.save_section_btn">Save this section</button>
+          <span class="hint settings-section-status" aria-live="polite"></span>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2 data-i18n="settings.tts_title">Voix — synthèse vocale (TTS)</h2>
+        <p class="hint" data-i18n="settings.tts_v40_hint">La v40 utilise Chatterbox Multilingual V3 par défaut. Qwen3-TTS 0.6B reste une option expérimentale isolée. XTTS et les services vocaux cloud ne sont ni installés ni utilisés.</p>
+        <label data-i18n="settings.tts_enabled_label">Activer la synthèse vocale</label>
+        <select id="s-tts_enabled">
+          <option value="false" data-i18n="common.no">Non</option>
+          <option value="true" data-i18n="common.yes">Oui</option>
+        </select>
+        <div class="row" style="gap:14px; margin-top:8px;">
+          <div style="flex:2; min-width:240px;">
+            <label for="s-tts_engine" data-i18n="settings.tts_engine_label">Moteur vocal</label>
+            <select id="s-tts_engine">
+              <option value="chatterbox" data-i18n="settings.tts_engine_chatterbox_option">Chatterbox Multilingual V3 — recommandé</option>
+              <option value="qwen" data-i18n="settings.tts_engine_qwen_option">Qwen3-TTS 0.6B — expérimental</option>
+            </select>
+          </div>
+          <div style="flex:1; min-width:120px;"><label data-i18n="settings.tts_device_label">Périphérique</label>
+            <select id="s-tts_device"><option value="auto" data-i18n="settings.tts_device_auto">Automatique</option><option value="cuda" data-i18n="settings.tts_device_cuda">GPU (CUDA)</option><option value="cpu" data-i18n="settings.tts_device_cpu">Processeur (CPU)</option></select>
+          </div>
+          <div style="flex:1; min-width:150px;"><label data-i18n="settings.tts_autolaunch_label">Lancer automatiquement</label>
+            <select id="s-tts_autolaunch"><option value="true" data-i18n="common.yes">Oui</option><option value="false" data-i18n="common.no">Non</option></select>
+          </div>
+          <div style="flex:1.35; min-width:210px;"><label data-i18n="settings.tts_vram_offload_label">Libérer la VRAM entre les moteurs</label>
+            <select id="s-tts_vram_offload_enabled"><option value="true" data-i18n="common.yes">Oui</option><option value="false" data-i18n="common.no">Non</option></select>
+          </div>
+        </div>
+        <p class="hint" data-i18n="settings.tts_vram_offload_hint">Recommandé sur les GPU de 16 Go : AmiorAI arrête le moteur vocal CUDA avant LM Studio ou ComfyUI, puis le relance automatiquement à la prochaine lecture.</p>
+        <div id="tts-engine-note" class="hint" style="margin:8px 0 12px;"></div>
+        <div class="row" style="gap:14px;">
+          <div style="flex:1; min-width:150px;"><label data-i18n="settings.tts_language_label">Langue de lecture</label>
+            <select id="s-tts_language">
+              <option value="fr">Français</option><option value="en">English</option>
+              <option value="es">Español</option><option value="de">Deutsch</option>
+              <option value="it">Italiano</option><option value="pt">Português</option>
+              <option value="ja">日本語</option><option value="ko">한국어</option>
+              <option value="zh">中文</option><option value="ru">Русский</option>
+              <option value="nl">Nederlands</option><option value="pl">Polski</option>
+              <option value="tr">Türkçe</option><option value="ar">العربية</option>
+              <option value="hi">हिन्दी</option><option value="he">עברית</option>
+              <option value="da">Dansk</option><option value="fi">Suomi</option>
+              <option value="el">Ελληνικά</option><option value="ms">Bahasa Melayu</option>
+              <option value="no">Norsk</option><option value="sv">Svenska</option>
+              <option value="sw">Kiswahili</option>
+            </select>
+          </div>
+          <div style="flex:1; min-width:120px;"><label data-i18n="settings.tts_speed_label">Vitesse</label><input id="s-tts_speed" type="number" min="0.75" max="1.25" step="0.05" placeholder="1.0"></div>
+          <div style="flex:1; min-width:190px;"><label data-i18n="settings.tts_autoplay_label">Lecture automatique des réponses</label>
+            <select id="s-tts_autoplay"><option value="true" data-i18n="common.yes">Oui</option><option value="false" data-i18n="common.no">Non</option></select>
+          </div>
+        </div>
+        <div id="tts-chatterbox-controls" class="row" style="gap:14px; margin-top:8px;">
+          <div style="flex:1; min-width:140px;"><label data-i18n="settings.tts_exaggeration_label">Expressivité</label><input id="s-tts_exaggeration" type="number" min="0.25" max="2" step="0.05"></div>
+          <div style="flex:1; min-width:140px;"><label data-i18n="settings.tts_cfg_label">Fidélité / rythme</label><input id="s-tts_cfg_weight" type="number" min="0" max="1" step="0.05"></div>
+          <div style="flex:1; min-width:140px;"><label data-i18n="settings.tts_temperature_label">Variation</label><input id="s-tts_temperature" type="number" min="0.05" max="2" step="0.05"></div>
+        </div>
+        <details style="margin-top:10px;">
+          <summary data-i18n="settings.tts_advanced_summary">Connexion avancée</summary>
+          <div class="row" style="gap:14px; margin-top:8px;">
+            <div style="flex:1; min-width:200px;"><label data-i18n="settings.tts_url_label">Adresse du serveur TTS</label><input id="s-tts_url"></div>
+          </div>
+        </details>
+        <div class="row" style="margin-top:12px; gap:8px;">
+          <button class="btn sm" id="tts-start-btn" data-i18n="settings.tts_start_btn">Démarrer le serveur TTS</button>
+          <button class="btn sm ghost" id="tts-restart-btn" data-i18n="system.comfy_restart_btn">Redémarrer</button>
+          <button class="btn sm danger" id="tts-kill-btn" data-i18n="system.comfy_stop_btn">Arrêter</button>
+          <span id="tts-status-line" class="hint"></span>
+        </div>
+        <p class="hint" data-i18n="settings.tts_install_hint">Installation : lance tts_server/install.bat pour Chatterbox. Lance tts_server/install_qwen.bat seulement pour ajouter l'option Qwen. Les poids sont téléchargés au premier démarrage.</p>
+        <div class="row settings-section-save-row" style="margin-top:16px; gap:8px; align-items:center;">
+          <button type="button" class="btn settings-section-save" data-i18n="settings.save_section_btn">Save this section</button>
+          <span class="hint settings-section-status" aria-live="polite"></span>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2 data-i18n="settings.whisper_title">Voix — dictée (reconnaissance vocale)</h2>
+        <p class="hint" data-i18n="settings.whisper_hint">Te permet de parler au lieu d'écrire, transcrit localement via Whisper (100% hors-ligne, aucun envoi externe).</p>
+        <label data-i18n="settings.whisper_enabled_label">Activer la dictée (micro)</label>
+        <select id="s-whisper_enabled">
+          <option value="false" data-i18n="common.no">Non</option>
+          <option value="true" data-i18n="common.yes">Oui</option>
+        </select>
+        <div class="row" style="gap:14px; margin-top:8px;">
+          <div style="flex:1; min-width:140px;"><label>Model size</label>
+            <select id="s-whisper_model_size">
+              <option value="tiny">tiny (very fast, less accurate)</option>
+              <option value="base">base</option>
+              <option value="small">small (good balance)</option>
+              <option value="medium">medium (accurate, heavier)</option>
+              <option value="large-v3">large-v3 (max accuracy)</option>
+            </select>
+          </div>
+          <div style="flex:1; min-width:120px;"><label>Device</label>
+            <select id="s-whisper_device"><option value="auto">Auto</option><option value="cuda">GPU (cuda)</option><option value="cpu">CPU</option></select>
+          </div>
+          <div style="flex:1; min-width:120px;"><label>Language (empty = auto)</label><input id="s-whisper_language" placeholder="fr"></div>
+        </div>
+        <p class="hint">Requires <code>pip install faster-whisper</code> in the app environment (see README). The model is downloaded automatically on first use.</p>
+        <div class="row settings-section-save-row" style="margin-top:16px; gap:8px; align-items:center;">
+          <button type="button" class="btn settings-section-save" data-i18n="settings.save_section_btn">Save this section</button>
+          <span class="hint settings-section-status" aria-live="polite"></span>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2 data-i18n="settings.comfy_title">Connexion ComfyUI</h2>
+        <p class="hint">Le choix des modèles (UNet/Checkpoint/CLIP/VAE) et des workflows par famille se fait maintenant dans l'onglet <strong data-i18n="nav.studio">Studio Image</strong> — ici, uniquement la connexion au moteur ComfyUI lui-même.</p>
+        <label>Dossier de ton install ComfyUI (celui qui contient main.py)</label>
+        <input id="s-comfy_path" placeholder="E:\STM\Data\Packages\ComfyUIFluxKlein9B">
+        <div class="row" style="gap:14px;">
+          <div style="flex:2; min-width:200px;"><label>ComfyUI Python (empty = auto-detect)</label>
+            <input id="s-comfy_python" placeholder="auto — otherwise …\venv\Scripts\python.exe"></div>
+          <div style="flex:1; min-width:160px;"><label>ComfyUI address</label><input id="s-comfy_url"></div>
+        </div>
+        <div class="row" style="gap:14px;">
+          <div style="flex:1; min-width:160px;"><label>Auto-start ComfyUI</label>
+            <select id="s-comfy_autolaunch">
+              <option value="true">yes (background, invisible)</option>
+              <option value="false">no (I start it myself)</option>
+            </select>
+          </div>
+          <div style="flex:1; min-width:140px;"><label>Extra arguments</label>
+            <input id="s-comfy_extra_args" placeholder="ex. --lowvram"></div>
+          <div style="flex:1; min-width:120px;"><label>Startup delay (s)</label>
+            <input id="s-comfy_start_timeout"></div>
+        </div>
+
+        <h3 style="margin-top:16px; font-size:14px;" data-i18n="settings.comfy_resolution_title">Résolution de génération</h3>
+        <select id="s-image_resolution">
+          <option value="1024x1024">Bob 1:1 — 1024×1024</option>
+          <option value="832x1216">Portrait 2:3 — 832×1216</option>
+          <option value="768x1344">Portrait 9:16 — 768×1344</option>
+          <option value="1344x768">Paysage 16:9 — 1344×768</option>
+          <option value="1216x832">Paysage 3:2 — 1216×832</option>
+        </select>
+        <p class="hint">Applies to all generations except previews (fixed 512×512). Duo/Trio/Group use their own workflow-defined resolution.</p>
+
+        <label style="margin-top:16px;" data-i18n="settings.comfy_negative_label">Prompt négatif par défaut (laisse vide pour FLUX.2)</label>
+        <textarea id="s-default_negative"></textarea>
+
+        <h3 style="margin-top:18px; font-size:14px;" data-i18n="settings.flux2_title">Flux 2 Klein — Chargement modèle</h3>
+        <p class="hint" style="margin-bottom:10px;">
+          Choose how AmiorAI loads the Flux 2 Klein UNet for <strong>all normal generations</strong>
+          (avatar, conversation, emotions, previews, duo, trio, group).
+          This choice does not modify temporary Image Studio settings.
+        </p>
+        <div class="row" style="gap:20px; align-items:flex-start; flex-wrap:wrap;">
+          <div>
+            <label style="font-weight:600;" data-i18n="settings.flux2_mode_label">Mode de chargement</label>
+            <div class="row" style="gap:12px; margin-top:6px;">
+              <label class="row" style="gap:6px; align-items:center; cursor:pointer;">
+                <input type="radio" id="s-flux2_mode_gguf" name="flux2_loader_mode" value="gguf" style="width:auto;">
+                <span>GGUF <span class="hint" data-i18n="settings.flux2_mode_gguf_hint">(quantisé, moins de VRAM)</span></span>
+              </label>
+              <label class="row" style="gap:6px; align-items:center; cursor:pointer;">
+                <input type="radio" id="s-flux2_mode_st" name="flux2_loader_mode" value="safetensors" style="width:auto;">
+                <span>Safetensors <span class="hint" data-i18n="settings.flux2_mode_st_hint">(full precision)</span></span>
+              </label>
+            </div>
+          </div>
+          <div id="flux2-unet-gguf-row" style="flex:1; min-width:220px;">
+            <label>UNet GGUF</label>
+            <select id="s-img_unet_gguf"><option value="" data-i18n="common.select_placeholder">— choisir —</option></select>
+          </div>
+          <div id="flux2-unet-st-row" style="flex:1; min-width:220px; display:none;">
+            <label>UNet Safetensors</label>
+            <select id="s-img_unet_safetensors"><option value="" data-i18n="common.select_placeholder">— choisir —</option></select>
+          </div>
+        </div>
+        <div id="flux2-mode-status" class="hint" style="margin-top:8px;"></div>
+
+        <div class="row" style="margin-top:14px;">
+          <button class="btn ghost" onclick="switchView('studio')" data-i18n="settings.comfy_goto_studio_btn">🎛️ Aller à Studio Image →</button>
+        </div>
+        <div class="row settings-section-save-row" style="margin-top:16px; gap:8px; align-items:center;">
+          <button type="button" class="btn settings-section-save" data-i18n="settings.save_section_btn">Save this section</button>
+          <span class="hint settings-section-status" aria-live="polite"></span>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2 data-i18n="settings.vram_title">Gestion de la VRAM</h2>
+        <label data-i18n="settings.vram_mode_label">Mode</label>
+        <select id="s-vram_mode">
+          <option value="swap" data-i18n="settings.vram_swap_opt">Bascule — un seul gros modèle en VRAM à la fois (conseillé 12–16 Go)</option>
+          <option value="coexist" data-i18n="settings.vram_coexist_opt">Coexistence — garde les deux chargés (gros GPU uniquement)</option>
+        </select>
+        <p class="hint">In switch mode, the app frees the LLM while generating an image (and vice versa).
+          The freed model is reloaded on the next request: the first response after a switch
+          de mode prend quelques secondes de plus.</p>
+        <div class="row settings-section-save-row" style="margin-top:16px; gap:8px; align-items:center;">
+          <button type="button" class="btn settings-section-save" data-i18n="settings.save_section_btn">Save this section</button>
+          <span class="hint settings-section-status" aria-live="polite"></span>
+        </div>
+      </div>
+
+      <!-- ===== ADVANCED PROMPTS ===== -->
+      <div class="panel" id="advanced-prompts-panel">
+        <h2 data-i18n="settings.advanced_prompts_title">Advanced prompts</h2>
+        <p class="hint">
+          Modify the global system prompts used by AmiorAI.
+          As long as no override is active, the built-in official prompt is used.
+          Reset removes the override and immediately restores the default behavior.
+        </p>
+        <div id="adv-prompts-container">
+          <span class="hint" data-i18n="common.loading">Chargement…</span>
+        </div>
+        <button class="btn sm danger" id="adv-prompts-reset-all" style="margin-top:14px;" data-i18n="settings.advanced_prompts_reset_btn">
+          ↺ Reset all advanced prompts
+        </button>
+      </div>
+
+      <button class="btn" id="s-save" data-i18n="settings.save_all_btn">Save all settings</button>
+      <span id="s-status" class="hint"></span>
+    </section>
+    <!-- ============ MODELS ============ -->
+    <section id="view-models" class="view">
+      <div class="row" style="justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <h1 style="margin:0;" data-i18n="models.title">Models</h1>
+        <div class="row gap-sm">
+          <button class="btn sm ghost" id="models-refresh-btn" data-i18n="models.refresh_btn">↺ Refresh</button>
+          <button class="btn sm" id="models-wishlist-add-btn" data-i18n="models.add_civitai_btn">+ Add depuis Civitai</button>
+        </div>
+      </div>
+      <p class="sub" data-i18n="models.sub">Checkpoints, UNet, VAE, CLIP détectés dans la Bibliothèque — enrichis de leur fiche Civitai.</p>
+
+      <!-- Filtres par type -->
+      <div class="row gap-sm" style="margin-bottom:14px; flex-wrap:wrap;">
+        <button class="btn sm ghost models-kind-btn active" data-kind="" data-i18n="common.all">Tous</button>
+        <button class="btn sm ghost models-kind-btn" data-kind="checkpoint" data-i18n="models.kind_checkpoint">Checkpoints</button>
+        <button class="btn sm ghost models-kind-btn" data-kind="unet" data-i18n="models.kind_unet">UNet</button>
+        <button class="btn sm ghost models-kind-btn" data-kind="vae" data-i18n="models.kind_vae">VAE</button>
+        <button class="btn sm ghost models-kind-btn" data-kind="clip" data-i18n="models.kind_clip">CLIP</button>
+      </div>
+
+      <!-- Grille de cartes -->
+      <div id="models-grid" class="lm-grid"></div>
+
+      <!-- Wishlist (not installed cards) -->
+      <div id="models-wishlist-section" style="margin-top:28px;">
+        <h2 style="margin-bottom:10px;" data-i18n="models.wishlist_title">Fiches non installées</h2>
+        <p class="hint" data-i18n="models.wishlist_hint">Modèles ajoutés depuis Civitai mais dont le fichier n'est pas encore détecté localement.</p>
+        <div id="models-wishlist-grid" class="lm-grid"></div>
+      </div>
+    </section>
+
+    <!-- ============ DIAGNOSTIC ============ -->
+    <section id="view-diagnostic" class="view">
+      <div class="row" style="justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <h1 style="margin:0;" data-i18n="diagnostic.title">Diagnostic AmiorAI</h1>
+        <div class="row gap-sm" style="align-items:center; flex-wrap:wrap;">
+          <label class="hint" for="diag-image-family" data-i18n="diagnostic.live.image_engine">Image engine</label>
+          <select id="diag-image-family" style="min-width:150px;">
+            <option value="flux2_klein">Flux 2 Klein</option>
+            <option value="krea2">Krea 2</option>
+          </select>
+          <button class="btn sm" id="diag-run-btn" data-i18n="diagnostic.run_btn">▶ Run</button>
+          <button class="btn sm ghost" id="diag-copy-btn" disabled data-i18n="diagnostic.copy_btn">⎘ Copy report</button>
+        </div>
+      </div>
+      <p class="sub" data-i18n="diagnostic.sub">Vérifie l'état de tous les composants sans rien modifier ni générer.</p>
+      <div id="diag-live-panel" class="panel" style="margin-bottom:12px;">
+        <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <strong data-i18n="diagnostic.live.title">Live runtime state</strong>
+          <span id="diag-live-updated" class="hint"></span>
+        </div>
+        <div class="diag-live-grid">
+          <div id="diag-live-lm" class="diag-live-card"></div>
+          <div id="diag-live-comfy" class="diag-live-card"></div>
+        </div>
+      </div>
+      <div id="diag-summary" class="panel" style="display:none;margin-bottom:12px;"></div>
+      <div id="diag-sections"></div>
+    </section>
+
+  </main>
+
+  <div id="modal-root"></div>
+  <script src="/icons.js?v=40.0.4"></script>
+  <script src="/app.js?v=40.0.4"></script>
+</body>
+</html>

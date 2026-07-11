@@ -1,0 +1,243 @@
+{
+  "211": {
+    "inputs": {
+      "clip_name": "qwen_3_8b_fp8mixed.safetensors",
+      "type": "flux2",
+      "device": "default"
+    },
+    "class_type": "CLIPLoader",
+    "_meta": {
+      "title": "Charger CLIP"
+    }
+  },
+  "212": {
+    "inputs": {
+      "unet_name": "BigLoveKlein3-Q5_K_M.gguf"
+    },
+    "class_type": "UnetLoaderGGUF",
+    "_meta": {
+      "title": "Unet Loader (GGUF)"
+    }
+  },
+  "213": {
+    "inputs": {
+      "text": "%NEGATIVE%",
+      "clip": [
+        "302",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Negative Prompt)"
+    }
+  },
+  "214": {
+    "inputs": {
+      "width": [
+        "215",
+        0
+      ],
+      "height": [
+        "216",
+        0
+      ],
+      "batch_size": 1
+    },
+    "class_type": "EmptyFlux2LatentImage",
+    "_meta": {
+      "title": "Flux vide vers latent"
+    }
+  },
+  "215": {
+    "inputs": {
+      "value": 512
+    },
+    "class_type": "PrimitiveInt",
+    "_meta": {
+      "title": "Width"
+    }
+  },
+  "216": {
+    "inputs": {
+      "value": 512
+    },
+    "class_type": "PrimitiveInt",
+    "_meta": {
+      "title": "Height"
+    }
+  },
+  "218": {
+    "inputs": {
+      "vae_name": "flux2-vae.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Charger VAE"
+    }
+  },
+  "219": {
+    "inputs": {
+      "samples": [
+        "223",
+        0
+      ],
+      "vae": [
+        "218",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "223": {
+    "inputs": {
+      "noise": [
+        "228",
+        0
+      ],
+      "guider": [
+        "227",
+        0
+      ],
+      "sampler": [
+        "235",
+        0
+      ],
+      "sigmas": [
+        "226",
+        0
+      ],
+      "latent_image": [
+        "214",
+        0
+      ]
+    },
+    "class_type": "SamplerCustomAdvanced",
+    "_meta": {
+      "title": "ÉchantillonneurPersonnaliséAvancé"
+    }
+  },
+  "226": {
+    "inputs": {
+      "steps": 6,
+      "width": [
+        "215",
+        0
+      ],
+      "height": [
+        "216",
+        0
+      ]
+    },
+    "class_type": "Flux2Scheduler",
+    "_meta": {
+      "title": "Flux2Scheduler"
+    }
+  },
+  "227": {
+    "inputs": {
+      "cfg": 1,
+      "model": [
+        "302",
+        0
+      ],
+      "positive": [
+        "233",
+        0
+      ],
+      "negative": [
+        "213",
+        0
+      ]
+    },
+    "class_type": "CFGGuider",
+    "_meta": {
+      "title": "GuideCFG"
+    }
+  },
+  "228": {
+    "inputs": {
+      "noise_seed": 291046950403466
+    },
+    "class_type": "RandomNoise",
+    "_meta": {
+      "title": "BruitAléatoire"
+    }
+  },
+  "233": {
+    "inputs": {
+      "text": "%PROMPT%",
+      "clip": [
+        "302",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Positive Prompt)"
+    }
+  },
+  "235": {
+    "inputs": {
+      "sampler_name": "euler"
+    },
+    "class_type": "KSamplerSelect",
+    "_meta": {
+      "title": "KSamplerSelect"
+    }
+  },
+  "900": {
+    "inputs": {
+      "filename_prefix": "companion/preview",
+      "images": [
+        "219",
+        0
+      ]
+    },
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "Save preview"
+    }
+  },
+  "301": {
+    "inputs": {
+      "lora_name": "",
+      "strength_model": 1.0,
+      "strength_clip": 1.0,
+      "model": [
+        "212",
+        0
+      ],
+      "clip": [
+        "211",
+        0
+      ]
+    },
+    "class_type": "LoraLoader",
+    "_meta": {
+      "title": "LoRA Slot (AmiorAI)"
+    }
+  },
+  "302": {
+    "inputs": {
+      "lora_name": "",
+      "strength_model": 1.0,
+      "strength_clip": 1.0,
+      "model": [
+        "301",
+        0
+      ],
+      "clip": [
+        "301",
+        1
+      ]
+    },
+    "class_type": "LoraLoader",
+    "_meta": {
+      "title": "LoRA Slot Secondaire (AmiorAI)"
+    }
+  }
+}

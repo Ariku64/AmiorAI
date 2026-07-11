@@ -1,0 +1,86 @@
+/* Copyright 2026 Ariku
+ * SPDX-License-Identifier: Apache-2.0
+ */
+/* ─────────────────────────────── AmiorAI Icon System v37.5 ────────────────── */
+
+/* Gradient partagé — défini via SVG defs dans index.html → url(#ai-grad) */
+:root {
+  --ic-size-xs: 14px;
+  --ic-size-sm: 18px;
+  --ic-size-md: 20px;
+  --ic-size-lg: 24px;
+  --ic-size-xl: 28px;
+  --ic-grad-a: #00d4ff;
+  --ic-grad-b: #3b82f6;
+  --ic-grad-c: #7c3aed;
+  --ic-opacity-disabled: 0.3;
+  --ic-glow: 0 0 8px rgba(99, 102, 241, 0.45);
+  --ic-glow-strong: 0 0 14px rgba(0, 212, 255, 0.55);
+}
+
+/* Base icon */
+.ai-ic {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  line-height: 1;
+}
+.ai-ic svg {
+  display: block;
+  width: var(--ic-size-md);
+  height: var(--ic-size-md);
+  transition: filter .2s, opacity .2s;
+}
+
+/* Tailles */
+.ai-ic.xs svg { width: var(--ic-size-xs); height: var(--ic-size-xs); }
+.ai-ic.sm svg { width: var(--ic-size-sm); height: var(--ic-size-sm); }
+.ai-ic.md svg { width: var(--ic-size-md); height: var(--ic-size-md); }
+.ai-ic.lg svg { width: var(--ic-size-lg); height: var(--ic-size-lg); }
+.ai-ic.xl svg { width: var(--ic-size-xl); height: var(--ic-size-xl); }
+
+/* Nav sidebar : taille uniforme */
+.nav .ic.ai-ic svg { width: 20px; height: 20px; }
+
+/* États */
+.ai-ic svg { opacity: 0.72; }
+.ai-ic:hover svg, .active .ai-ic svg,
+.nav button.active .ic.ai-ic svg { opacity: 1; filter: var(--ic-glow); }
+
+button:disabled .ai-ic svg { opacity: var(--ic-opacity-disabled); filter: none; }
+
+/* Couleur muted (boutons ghost) */
+.ai-ic.muted svg path, .ai-ic.muted svg circle,
+.ai-ic.muted svg rect, .ai-ic.muted svg polygon {
+  fill: var(--sub, #8070a0);
+}
+.ai-ic.danger svg path, .ai-ic.danger svg circle,
+.ai-ic.danger svg rect {
+  fill: var(--danger, #dc2626);
+}
+
+
+/* v38.1.3 — resilient desktop/mobile menu integration */
+.nav .ic.ai-ic,
+.m-nav-btn .ic.ai-ic {
+  width: 22px;
+  min-width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.nav .ic.ai-ic svg,
+.m-nav-btn .ic.ai-ic svg {
+  width: 21px;
+  height: 21px;
+  overflow: visible;
+}
+.m-nav-btn .ic.ai-ic {
+  margin-bottom: 2px;
+}
+.m-nav-btn.active .ic.ai-ic svg {
+  opacity: 1;
+  filter: var(--ic-glow);
+}
