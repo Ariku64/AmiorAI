@@ -3,8 +3,8 @@
     "lang": "en",
     "name": "English",
     "fallback": null,
-    "version": "40.0.8",
-    "generated": "2026-07-12T13:15:58.174592"
+    "version": "40.0.9",
+    "generated": "2026-07-12T20:07:04.717072"
   },
   "nav": {
     "characters": "Characters",
@@ -326,7 +326,18 @@
       "title": "Writing helpers"
     },
     "share_hint": "Public package: conversations, personal memories, voice and settings are never included.",
-    "share_btn": "📤 Share"
+    "share_btn": "📤 Share",
+    "visual_style": {
+      "title": "Choose a visual creator",
+      "hint": "Each creator keeps its own draft and its own preview library.",
+      "realistic_title": "Realistic creator",
+      "realistic_desc": "Current photorealistic generation, unchanged.",
+      "anime_title": "Anime creator",
+      "anime_desc": "Anime prompts and a separate anime preview library.",
+      "cartoon_title": "Cartoon creator",
+      "cartoon_desc": "Cartoon prompts and a separate cartoon preview library.",
+      "switched": "Active section: {style}"
+    }
   },
   "chat": {
     "title": "Chats",
@@ -1164,6 +1175,6 @@
     "global_engine_label": "Global image engine"
   },
   "meta": {
-    "version": "40.0.8"
+    "version": "40.0.9"
   }
 }

@@ -19,7 +19,7 @@
 </p>
 
 <p align="center">
-  Current release: <strong>v40.0.8</strong> · Windows 10/11 · Apache-2.0
+  Current release: <strong>v40.0.9</strong> · Windows 10/11 · Apache-2.0
 </p>
 
 <p align="center">
@@ -158,7 +158,7 @@ A simple first session is:
 
 1. Open **Settings** and test LM Studio.
 2. Configure ComfyUI and run **Diagnostics** if images are wanted.
-3. Open **Characters** and create a character.
+3. Open **Characters**, choose **Realistic**, **Anime** or **Cartoon**, then create a character.
 4. Define its name, personality, scenario, greeting and physical description.
 5. Add an avatar or generate one.
 6. Create a conversation and send the first message.
@@ -452,6 +452,8 @@ CPU TTS is not stopped because it consumes no GPU VRAM.
 # Daily use guide
 
 ## 1. Create a character
+
+Choose one of the three visual creators first. Realistic keeps the current prompts unchanged; Anime and Cartoon automatically prefix every character image prompt and use separate configurator previews.
 
 Open **Characters** and create a new entry. The most important fields are:
 

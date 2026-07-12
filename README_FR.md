@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  Version actuelle : <strong>v40.0.8</strong> · Windows 10/11 · Apache-2.0
+  Version actuelle : <strong>v40.0.9</strong> · Windows 10/11 · Apache-2.0
 </p>
 
 <p align="center">
@@ -42,7 +42,7 @@ L’interface, les personnages, les conversations, les mémoires, les images et 
 | Fonction | Description |
 |---|---|
 | Conversations locales | Connexion au serveur compatible OpenAI de LM Studio. |
-| Création de personnages | Personnalité, scénario, message d’accueil, description physique, avatar et voix. |
+| Création de personnages | Trois créateurs séparés Réaliste, Anime et Cartoon, avec brouillons et aperçus indépendants. |
 | Paquets partageables | Export/import public des personnages avec fiche, avatar et visages d’humeur, ainsi que des scénarios portables. |
 | Mémoire persistante | Conservation des personnages et conversations entre les sessions. |
 | Affichage roleplay | Rendu distinct des dialogues, narrations et expressions. |
@@ -152,7 +152,7 @@ Pour effectuer un premier test complet :
 
 1. Ouvrez **Réglages** et testez LM Studio.
 2. Configurez ComfyUI et lancez **Diagnostic** si vous souhaitez utiliser les images.
-3. Ouvrez **Personnages** et créez un personnage.
+3. Ouvrez **Personnages**, choisissez **Réaliste**, **Anime** ou **Cartoon**, puis créez un personnage.
 4. Définissez son nom, sa personnalité, son scénario, son message d’accueil et sa description physique.
 5. Importez ou générez son avatar.
 6. Créez une conversation et envoyez le premier message.
@@ -446,6 +446,8 @@ Un TTS exécuté sur CPU n’est pas arrêté puisqu’il n’utilise aucune VRA
 # Guide d’utilisation
 
 ## 1. Créer un personnage
+
+Choisissez d’abord l’un des trois créateurs visuels. Réaliste conserve les prompts actuels ; Anime et Cartoon préfixent automatiquement toutes les générations du personnage et utilisent leurs propres aperçus du configurateur.
 
 Ouvrez **Personnages** et créez une nouvelle fiche. Les champs les plus importants sont :
 

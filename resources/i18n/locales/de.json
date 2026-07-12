@@ -3,8 +3,8 @@
     "lang": "de",
     "name": "Deutsch",
     "fallback": "en",
-    "version": "40.0.8",
-    "generated": "2026-07-12T13:15:58.174592"
+    "version": "40.0.9",
+    "generated": "2026-07-12T20:07:04.717072"
   },
   "nav": {
     "characters": "Charaktere",
@@ -326,7 +326,18 @@
       "title": "Schreibhilfen"
     },
     "share_hint": "Öffentliches Paket: Unterhaltungen, persönliche Erinnerungen, Stimme und Einstellungen werden niemals eingeschlossen.",
-    "share_btn": "📤 Teilen"
+    "share_btn": "📤 Teilen",
+    "visual_style": {
+      "title": "Visuellen Ersteller auswählen",
+      "hint": "Jeder Ersteller behält seinen eigenen Entwurf und seine eigene Vorschaubibliothek.",
+      "realistic_title": "Realistischer Ersteller",
+      "realistic_desc": "Aktuelle fotorealistische Generierung, unverändert.",
+      "anime_title": "Anime-Ersteller",
+      "anime_desc": "Anime-Prompts und eine separate Anime-Vorschaubibliothek.",
+      "cartoon_title": "Cartoon-Ersteller",
+      "cartoon_desc": "Cartoon-Prompts und eine separate Cartoon-Vorschaubibliothek.",
+      "switched": "Aktiver Bereich: {style}"
+    }
   },
   "chat": {
     "title": "Gespräche",
@@ -1164,6 +1175,6 @@
     "global_engine_label": "Globales Bildmodell"
   },
   "meta": {
-    "version": "40.0.8"
+    "version": "40.0.9"
   }
 }

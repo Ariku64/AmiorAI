@@ -139,7 +139,117 @@ function switchView(name) {
 //  PERSONNAGES
 // --------------------------------------------------------------------------- //
 const CF = ["id", "name", "age", "role", "moral_limits", "personality", "appearance", "scenario",
-            "greeting", "system_prompt", "image_prompt", "locked_tags", "krea_token", "voice_transcript"];
+            "greeting", "system_prompt", "image_prompt", "locked_tags", "krea_token", "voice_transcript",
+            "visual_style"];
+
+const CREATOR_VISUAL_STYLES = ["realistic", "anime", "cartoon"];
+let activeCreatorStyle = "realistic";
+const creatorDrafts = { realistic: null, anime: null, cartoon: null };
+
+function normalizeCreatorStyle(value) {
+  return CREATOR_VISUAL_STYLES.includes(value) ? value : "realistic";
+}
+
+function creatorStyleLabelKey(style) {
+  return `char.visual_style.${normalizeCreatorStyle(style)}_title`;
+}
+
+function captureCreatorDraft() {
+  const config = {};
+  for (const f of CONFIG_FIELDS) {
+    config[f.key] = {
+      value: ($(`#cg-${f.key}`) || {}).value || "",
+      custom: ($(`#cg-${f.key}-custom`) || {}).value || "",
+    };
+  }
+  const form = {};
+  for (const f of CF) form[f] = ($(`#f-${f}`) || {}).value || "";
+  form.visual_style = activeCreatorStyle;
+  return {
+    brief: ($("#cg-brief") || {}).value || "",
+    name: ($("#cg-name") || {}).value || "",
+    age: ($("#cg-age") || {}).value || "25",
+    config, form,
+    formVisible: ($("#cg-form") || {}).style.display !== "none",
+    kreaForcePhysical: !!($("#f-krea_force_physical") || {}).checked,
+    avatar: currentAvatar || "",
+  };
+}
+
+function clearCreatorWorkspace(style, showForm = false) {
+  const normalized = normalizeCreatorStyle(style);
+  if ($("#cg-brief")) $("#cg-brief").value = "";
+  if ($("#cg-name")) $("#cg-name").value = "";
+  if ($("#cg-age")) $("#cg-age").value = "25";
+  if ($("#cg-age-val")) $("#cg-age-val").textContent = "25";
+  for (const f of CONFIG_FIELDS) {
+    const select = $(`#cg-${f.key}`);
+    const custom = $(`#cg-${f.key}-custom`);
+    if (select) select.value = "";
+    if (custom) { custom.value = ""; custom.style.display = "none"; }
+  }
+  const empty = {};
+  for (const f of CF) empty[f] = "";
+  empty.visual_style = normalized;
+  fillForm(empty);
+  currentAvatar = "";
+  if ($("#cg-form")) $("#cg-form").style.display = showForm ? "block" : "none";
+  if ($("#cg-status")) $("#cg-status").textContent = "";
+  if ($("#cg-save-status")) $("#cg-save-status").textContent = "";
+  refreshAllThumbs();
+}
+
+function restoreCreatorDraft(draft, style) {
+  const normalized = normalizeCreatorStyle(style);
+  if (!draft) return clearCreatorWorkspace(normalized, false);
+  if ($("#cg-brief")) $("#cg-brief").value = draft.brief || "";
+  if ($("#cg-name")) $("#cg-name").value = draft.name || "";
+  if ($("#cg-age")) $("#cg-age").value = draft.age || "25";
+  if ($("#cg-age-val")) $("#cg-age-val").textContent = draft.age || "25";
+  for (const f of CONFIG_FIELDS) {
+    const saved = (draft.config || {})[f.key] || {};
+    const select = $(`#cg-${f.key}`);
+    const custom = $(`#cg-${f.key}-custom`);
+    if (select) select.value = saved.value || "";
+    if (custom) {
+      custom.value = saved.custom || "";
+      custom.style.display = saved.value === "custom" ? "block" : "none";
+    }
+  }
+  fillForm({ ...(draft.form || {}), visual_style: normalized });
+  const kfp = $("#f-krea_force_physical");
+  if (kfp) kfp.checked = draft.kreaForcePhysical !== false;
+  currentAvatar = draft.avatar || "";
+  if ($("#cg-form")) $("#cg-form").style.display = draft.formVisible ? "block" : "none";
+  refreshAllThumbs();
+}
+
+function refreshCreatorStyleUI() {
+  document.querySelectorAll("[data-creator-style]").forEach((btn) => {
+    const active = btn.dataset.creatorStyle === activeCreatorStyle;
+    btn.classList.toggle("active", active);
+    btn.setAttribute("aria-selected", active ? "true" : "false");
+  });
+  const panel = document.querySelector(".creator-panel");
+  if (panel) panel.dataset.creatorStyleActive = activeCreatorStyle;
+  const current = $("#cg-style-current");
+  if (current) {
+    current.dataset.i18n = creatorStyleLabelKey(activeCreatorStyle);
+    current.textContent = window.t(creatorStyleLabelKey(activeCreatorStyle));
+  }
+  const hidden = $("#f-visual_style");
+  if (hidden) hidden.value = activeCreatorStyle;
+}
+
+async function activateCreatorStyle(style, { capture = true, restore = true } = {}) {
+  const normalized = normalizeCreatorStyle(style);
+  if (capture && activeCreatorStyle) creatorDrafts[activeCreatorStyle] = captureCreatorDraft();
+  activeCreatorStyle = normalized;
+  refreshCreatorStyleUI();
+  await loadOptionPreviews();
+  if (restore) restoreCreatorDraft(creatorDrafts[normalized], normalized);
+}
+
 
 // Physical configurator: each field is a list of [value, label] options
 const CONFIG_FIELDS = [
@@ -257,8 +367,10 @@ const CUSTOM_FIELDS = new Set(["corps", "poitrine", "hanches"]);  // option « P
 let optionPreviews = {};                                          // {field:{gender:{value:image}}}
 
 async function loadOptionPreviews() {
-  try { optionPreviews = await api("/api/config/previews"); }
-  catch (e) { optionPreviews = {}; }
+  try {
+    optionPreviews = await api("/api/config/previews?visual_style=" + encodeURIComponent(activeCreatorStyle));
+  } catch (e) { optionPreviews = {}; }
+  refreshAllThumbs();
 }
 
 function currentGender() { return fieldValue("genre") || ""; }
@@ -397,7 +509,8 @@ function openPreviewPicker(field) {
       const t = btn.textContent; btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
       try {
         const res = await api("/api/config/preview", "POST",
-          { field, value: v, gender: field === "genre" ? "" : currentGender(), regen: true });
+          { field, value: v, gender: field === "genre" ? "" : currentGender(),
+            visual_style: activeCreatorStyle, regen: true });
         setPreviewLocal(field, v, res.image);
         box.innerHTML = ""; box.append(el("img", { src: imgUrl(res.image) }));
         btn.textContent = "↻";
@@ -415,7 +528,8 @@ function openPreviewPicker(field) {
       btn.innerHTML = `<span class="spinner"></span> ${i + 1}/${missing.length}`;
       try {
         const res = await api("/api/config/preview", "POST",
-          { field, value: missing[i][0], gender: field === "genre" ? "" : currentGender() });
+          { field, value: missing[i][0], gender: field === "genre" ? "" : currentGender(),
+            visual_style: activeCreatorStyle });
         setPreviewLocal(field, missing[i][0], res.image);
       } catch (e) { toast(e.message, true); break; }
       render();
@@ -461,6 +575,17 @@ function openPreviewPicker(field) {
   render();
 }
 
+document.querySelectorAll("[data-creator-style]").forEach((btn) => {
+  btn.addEventListener("click", async () => {
+    if (btn.dataset.creatorStyle === activeCreatorStyle) return;
+    try {
+      await activateCreatorStyle(btn.dataset.creatorStyle);
+      toast(window.t("char.visual_style.switched", { style: window.t(creatorStyleLabelKey(activeCreatorStyle)) }));
+    } catch (e) { toast(e.message, true); }
+  });
+});
+refreshCreatorStyleUI();
+
 // Slider d'âge : met à jour l'affichage
 (function () {
   const a = $("#cg-age"), out = $("#cg-age-val");
@@ -477,6 +602,7 @@ $("#cg-generate").addEventListener("click", async () => {
   for (const f of CONFIG_FIELDS) attrs[f.key] = fieldValue(f.key);
   attrs.age = ($("#cg-age") || {}).value || "";
   attrs.name = ($("#cg-name") || {}).value.trim();
+  attrs.visual_style = activeCreatorStyle;
   try {
     const data = await api("/api/character/generate", "POST", { brief, attrs });
     fillForm({ ...data, id: "" });
@@ -491,6 +617,8 @@ $("#cg-generate").addEventListener("click", async () => {
 });
 
 function fillForm(c) {
+  c = c || {};
+  c.visual_style = normalizeCreatorStyle(c.visual_style || activeCreatorStyle);
   for (const f of CF) {
     const node = $("#f-" + f);
     if (node) node.value = c[f] || "";
@@ -541,6 +669,7 @@ function renderVoicePreview(voiceSample, notSaved) {
 function readForm() {
   const o = {};
   for (const f of CF) o[f] = ($("#f-" + f) || {}).value || "";
+  o.visual_style = activeCreatorStyle;
   const kfp = $("#f-krea_force_physical");
   o.krea_force_physical = (kfp && !kfp.checked) ? "0" : "1";
   if (currentAvatar) o.avatar = currentAvatar;
@@ -556,13 +685,17 @@ function resetCharacterForm() {
   currentAvatar = "";
   const status = $("#cg-save-status");
   if (status) status.textContent = "";
-  // Reset aussi le configurateur physique si présent
+  // Reset aussi le configurateur physique de CE créateur uniquement.
   for (const f of (CONFIG_FIELDS || [])) {
-    const el_ = document.querySelector(`[data-key="${f.key}"]`);
-    if (el_) el_.value = "";
-    const elAlt = $(`#cfg-${f.key}`);
-    if (elAlt) elAlt.value = "";
+    const select = $(`#cg-${f.key}`);
+    const custom = $(`#cg-${f.key}-custom`);
+    if (select) select.value = "";
+    if (custom) { custom.value = ""; custom.style.display = "none"; }
   }
+  const hiddenStyle = $("#f-visual_style");
+  if (hiddenStyle) hiddenStyle.value = activeCreatorStyle;
+  refreshAllThumbs();
+  creatorDrafts[activeCreatorStyle] = null;
 }
 
 const _cgNewChar = $("#cg-new-char");
@@ -688,7 +821,8 @@ $("#cg-avatar").addEventListener("click", async () => {
   if (!id && !fallback) return toast(window.t("char.validation.image_prompt_required"), true);
   let proposed = fallback;
   try {
-    const dr = await api("/api/character/avatar", "POST", { id, image_prompt: fallback, dry_run: true });
+    const dr = await api("/api/character/avatar", "POST",
+      { id, image_prompt: fallback, visual_style: activeCreatorStyle, dry_run: true });
     proposed = dr.prompt || fallback;
   } catch (e) { /* on garde le fallback */ }
   const edited = await promptDialog(proposed, window.t("char.avatar.review_title"));
@@ -698,7 +832,7 @@ $("#cg-avatar").addEventListener("click", async () => {
   $("#cg-avatar").disabled = true;
   try {
     const data = await api("/api/character/avatar", "POST",
-      { id, image_prompt: edited, prompt: edited });
+      { id, image_prompt: edited, prompt: edited, visual_style: activeCreatorStyle });
     currentAvatar = data.image;
     $("#cg-avatar-preview").innerHTML =
       `<img src="${imgUrl(data.image)}" style="max-width:240px;border-radius:12px;">`;
@@ -885,6 +1019,8 @@ async function loadCharacters() {
       av,
       el("div", { class: "body" },
         el("div", { class: "nm" }, c.name),
+        el("div", { class: `char-style-badge ${normalizeCreatorStyle(c.visual_style)}` },
+          window.t(creatorStyleLabelKey(c.visual_style))),
         el("div", { class: "acts" },
           el("button", { class: "btn sm", onclick: () => startChat(c.id) }, window.t("char.chat_btn")),
           el("button", { class: "btn sm ghost", onclick: () => editCharacter(c) }, window.t("common.edit")),
@@ -898,11 +1034,13 @@ async function loadCharacters() {
   }
 }
 
-function editCharacter(c) {
+async function editCharacter(c) {
+  await activateCreatorStyle(c.visual_style || "realistic", { capture: true, restore: false });
   fillForm(c);
   currentAvatar = c.avatar || "";
   $("#cg-form").style.display = "block";
   $("#cg-status").textContent = window.t("char.editing", { name: c.name });
+  creatorDrafts[activeCreatorStyle] = captureCreatorDraft();
   $("#view-characters").scrollIntoView({ behavior: "smooth" });
 }
 

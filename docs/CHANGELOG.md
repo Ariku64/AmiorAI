@@ -1,6 +1,19 @@
 # AmiorAI — Journal des modifications
 
 
+## v40.0.9 — 12 juillet 2026
+
+### Créateurs visuels Réaliste, Anime et Cartoon
+
+- Trois sections de création clairement distinctes dans l’interface : Réaliste, Anime et Cartoon.
+- Chaque section conserve son propre brouillon, ses sélections physiques et sa bibliothèque d’aperçus.
+- Les aperçus sont désormais isolés par moteur d’image et par style visuel afin d’éviter tout mélange.
+- Les styles Anime et Cartoon ajoutent automatiquement leur préfixe au début des prompts d’avatar, d’émotions, de conversation, de groupe et de fond.
+- Le mode Réaliste conserve strictement le comportement actuel, sans préfixe ajouté.
+- Le style est enregistré dans la fiche, affiché sur la carte et conservé dans les paquets `.amiorchar`.
+- Migration non destructive : personnages et aperçus existants deviennent Réalistes par défaut.
+- Traductions FR/EN/ES/DE et fichier maître `translations_master.xlsx` synchronisés.
+
 ## v40.0.8 — 12 juillet 2026
 
 ### Personnages et scénarios partageables

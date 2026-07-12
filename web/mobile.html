@@ -120,9 +120,14 @@ body{background:var(--bg);color:var(--text);font-family:system-ui,sans-serif;
   padding:10px 18px;font-size:.85rem;z-index:200;max-width:320px;text-align:center;display:none;}
 ::-webkit-scrollbar{width:3px;height:3px;}
 ::-webkit-scrollbar-thumb{background:var(--line);border-radius:2px;}
+
+.style-choice-grid{display:grid;grid-template-columns:1fr;gap:10px;margin-top:8px;}
+.style-choice{display:flex;align-items:center;gap:12px;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--panel);color:var(--text);text-align:left;}
+.style-choice.on{border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 30%,transparent);}
+.style-choice .ico{font-size:26px}.style-choice small{display:block;color:var(--muted);margin-top:3px;}
 </style>
 <script src="/i18n.js"></script>
-  <link rel="stylesheet" href="/icons.css?v=40.0.8">
+  <link rel="stylesheet" href="/icons.css?v=40.0.9">
 </head>
 <body>
 <svg style="display:none;position:absolute;width:0;height:0" aria-hidden="true"><defs>
@@ -240,7 +245,7 @@ body{background:var(--bg);color:var(--text);font-family:system-ui,sans-serif;
 
 <div class="toast-el" id="toast"></div>
 
-<script src="/icons.js?v=40.0.8"></script>
+<script src="/icons.js?v=40.0.9"></script>
 <script>
 'use strict';
 const $ = id => document.getElementById(id);
@@ -570,6 +575,9 @@ async function loadChars() {
 
 // Stepper — champs réels du backend
 const STEPS = [
+  {label:window.t('char.visual_style.title'), fields:[
+    {key:'visual_style', type:'visual_style'},
+  ]},
   {label:window.t('mobile.character.identity'), fields:[
     {key:'name', label:window.t('mobile.character.first_name'), ph:window.t('mobile.character.name_placeholder'), type:'text', req:true},
     {key:'_last_name', label:window.t('mobile.character.last_name'), ph:'', type:'text'},
@@ -616,13 +624,31 @@ function renderStep() {
       const field=document.createElement('div'); field.className='m-field';
       const lbl=document.createElement('label'); lbl.className='m-label'; lbl.textContent=f.label;
       field.append(lbl);
+      if(f.type==='visual_style'){
+        const grid=document.createElement('div'); grid.className='style-choice-grid';
+        const choices=[
+          ['realistic','📷','char.visual_style.realistic_title','char.visual_style.realistic_desc'],
+          ['anime','🌸','char.visual_style.anime_title','char.visual_style.anime_desc'],
+          ['cartoon','🎨','char.visual_style.cartoon_title','char.visual_style.cartoon_desc'],
+        ];
+        if(!_sd.visual_style) _sd.visual_style='realistic';
+        choices.forEach(([value,icon,titleKey,descKey])=>{
+          const btn=document.createElement('button'); btn.type='button';
+          btn.className='style-choice'+(_sd.visual_style===value?' on':'');
+          btn.innerHTML=`<span class="ico">${icon}</span><span><strong>${esc(window.t(titleKey))}</strong><small>${esc(window.t(descKey))}</small></span>`;
+          btn.addEventListener('click',()=>{ _sd.visual_style=value; renderStep(); });
+          grid.append(btn);
+        });
+        field.append(grid); content.append(field);
+        return;
+      }
       let inp;
       if(f.type==='textarea'){
         inp=document.createElement('textarea'); inp.className='m-input m-textarea'; inp.rows=3;
       } else {
         inp=document.createElement('input'); inp.type=f.type; inp.className='m-input';
       }
-      inp.placeholder=f.ph; inp.value=_sd[f.key]||'';
+      inp.placeholder=f.ph||''; inp.value=_sd[f.key]||'';
       inp.addEventListener('input',()=>{ _sd[f.key]=inp.value; });
       field.append(inp); content.append(field);
     });
@@ -631,7 +657,7 @@ function renderStep() {
   $('btn-step-prev').style.display=_si===0?'none':'';
 }
 
-$('btn-new-char').addEventListener('click',()=>{ _sd={}; _si=0; $('char-create-panel').style.display='block'; renderStep(); });
+$('btn-new-char').addEventListener('click',()=>{ _sd={visual_style:'realistic'}; _si=0; $('char-create-panel').style.display='block'; renderStep(); });
 $('btn-char-back').addEventListener('click',()=>$('char-create-panel').style.display='none');
 $('btn-step-prev').addEventListener('click',()=>{ _si=Math.max(0,_si-1); renderStep(); });
 $('btn-step-next').addEventListener('click', async ()=>{
@@ -649,6 +675,7 @@ $('btn-step-next').addEventListener('click', async ()=>{
       personality: _sd.personality || '',
       scenario:    _sd.scenario    || '',
       greeting:    _sd.greeting    || '',
+      visual_style: _sd.visual_style || 'realistic',
     };
     const r = await api('/api/character/save', 'POST', payload);
     if (r.ok || r.id) {

@@ -362,7 +362,7 @@ _LAN_LOGIN_HTML = """<!DOCTYPE html>
 
 
 APP_NAME = "AmiorAI"
-APP_VERSION = "v40.0.8"
+APP_VERSION = "v40.0.9"
 
 # --------------------------------------------------------------------------- #
 #  Chemins et constantes — source unique : app_paths.py
@@ -639,6 +639,7 @@ def init_db():
                 system_prompt TEXT,
                 image_prompt  TEXT,
                 avatar        TEXT,
+                visual_style  TEXT DEFAULT 'realistic',
                 created_at    REAL
             );
             CREATE TABLE IF NOT EXISTS chats (
@@ -685,9 +686,10 @@ def init_db():
                 value      TEXT,
                 gender     TEXT,
                 family     TEXT DEFAULT 'flux2_klein',
+                visual_style TEXT DEFAULT 'realistic',
                 image      TEXT,
                 created_at REAL,
-                PRIMARY KEY (field, value, gender, family)
+                PRIMARY KEY (field, value, gender, family, visual_style)
             );
             CREATE TABLE IF NOT EXISTS char_memory (
                 id           TEXT PRIMARY KEY,
@@ -831,6 +833,7 @@ def init_db():
         # migrations Krea 2 (v38.1) — identité et base physique persistante
         _add_col(c, "characters", "krea_token", "TEXT")                       # jeton d'identité (trigger LoRA) pour les prompts Krea 2
         _add_col(c, "characters", "krea_force_physical", "INTEGER DEFAULT 1")  # 1 = injecter la base physique du configurateur dans chaque prompt Krea 2
+        _add_col(c, "characters", "visual_style", "TEXT DEFAULT 'realistic'")   # realistic | anime | cartoon
         _add_col(c, "chats", "scenario_id", "TEXT")
         _add_col(c, "messages", "image_prompt", "TEXT")
         _add_col(c, "messages", "seed", "INTEGER")
@@ -852,28 +855,27 @@ def init_db():
         _add_col(c, "lora_civitai_metadata", "updated_at",                    "REAL")
         # migration : supprimer l'ancienne colonne current_mood de char_memory si elle existe
         # (SQLite ne supporte pas DROP COLUMN avant 3.35 — on la laisse, elle sera ignoree)
-        # Migration option_previews: v38.1.1 adds the image family to the cache key.
-        # Existing previews are from the historical Flux pipeline, so they are preserved as flux2_klein.
+        # Migration option_previews: caches are isolated by engine AND visual style.
+        # Historical previews are preserved as realistic previews.
         opinfo = c.execute("PRAGMA table_info(option_previews)").fetchall()
         opcols = [r[1] for r in opinfo]
-        if opcols and ("gender" not in opcols or "family" not in opcols):
+        if opcols and ("gender" not in opcols or "family" not in opcols or "visual_style" not in opcols):
             c.execute("ALTER TABLE option_previews RENAME TO option_previews_legacy")
             c.execute(
                 "CREATE TABLE option_previews ("
                 "field TEXT, value TEXT, gender TEXT, family TEXT DEFAULT 'flux2_klein', "
-                "image TEXT, created_at REAL, PRIMARY KEY (field, value, gender, family))"
+                "visual_style TEXT DEFAULT 'realistic', image TEXT, created_at REAL, "
+                "PRIMARY KEY (field, value, gender, family, visual_style))"
             )
-            if "gender" in opcols:
-                c.execute(
-                    "INSERT OR REPLACE INTO option_previews(field,value,gender,family,image,created_at) "
-                    "SELECT field,value,COALESCE(gender,''),'flux2_klein',image,created_at "
-                    "FROM option_previews_legacy"
-                )
-            else:
-                c.execute(
-                    "INSERT OR REPLACE INTO option_previews(field,value,gender,family,image,created_at) "
-                    "SELECT field,value,'','flux2_klein',image,created_at FROM option_previews_legacy"
-                )
+            gender_expr = "COALESCE(gender,'')" if "gender" in opcols else "''"
+            family_expr = "COALESCE(family,'flux2_klein')" if "family" in opcols else "'flux2_klein'"
+            style_expr = "COALESCE(visual_style,'realistic')" if "visual_style" in opcols else "'realistic'"
+            c.execute(
+                "INSERT OR REPLACE INTO option_previews("
+                "field,value,gender,family,visual_style,image,created_at) "
+                f"SELECT field,value,{gender_expr},{family_expr},{style_expr},image,created_at "
+                "FROM option_previews_legacy"
+            )
             c.execute("DROP TABLE option_previews_legacy")
         model_catalog.ensure_schema(c)
         # Table fiches Civitai non installées localement (wishlist modèles)
@@ -993,6 +995,36 @@ def new_id():
     return uuid.uuid4().hex[:12]
 
 
+VISUAL_STYLES = ("realistic", "anime", "cartoon")
+VISUAL_STYLE_PREFIXES = {
+    "realistic": "",
+    "anime": "anime, ",
+    "cartoon": "cartoon, ",
+}
+
+
+def normalize_visual_style(value):
+    """Normalize a persisted character visual style; old data stays realistic."""
+    style = str(value or "realistic").strip().lower()
+    return style if style in VISUAL_STYLES else "realistic"
+
+
+def apply_visual_style(prompt, visual_style):
+    """Prefix image prompts with the character style without duplicating the marker."""
+    text = str(prompt or "").strip()
+    style = normalize_visual_style(visual_style)
+    prefix = VISUAL_STYLE_PREFIXES[style]
+    if not prefix or not text:
+        return text
+    if re.match(rf"^\s*{re.escape(style)}\b", text, flags=re.IGNORECASE):
+        return text
+    return prefix + text
+
+
+def _character_visual_style(character):
+    return normalize_visual_style((character or {}).get("visual_style"))
+
+
 def _safe_filename_token(value, fallback="upload", max_len=48):
     """Return a filesystem-safe token for generated upload filenames."""
     token = re.sub(r"[^A-Za-z0-9_-]+", "_", str(value or "").strip()).strip("_-")
@@ -1047,7 +1079,9 @@ from i18n_backend import (
 
 def generate_character(brief, settings, attrs=None):
     """Génère une fiche de personnage via le LLM, dans la langue active (ui_language)."""
-    attrs = attrs or {}
+    attrs = dict(attrs or {})
+    visual_style = normalize_visual_style(attrs.get("visual_style"))
+    attrs["visual_style"] = visual_style
     lang = settings.get("ui_language", "en").strip().lower()
 
     # Tags image (toujours EN, pour FLUX)
@@ -1078,6 +1112,8 @@ def generate_character(brief, settings, attrs=None):
     if tags:
         existing = data.get("image_prompt", "") or ""
         data["image_prompt"] = (tags + ", " + existing).strip(", ")
+    data["visual_style"] = visual_style
+    data["image_prompt"] = apply_visual_style(data.get("image_prompt", ""), visual_style)
     # Extraction des memory_seeds pour initialisation après save
     data["_memory_seeds"] = data.pop("memory_seeds", {})
     return data
@@ -1598,26 +1634,33 @@ def api_character_save(data):
     cid = data.get("id") or new_id()
     fields = ("name", "age", "personality", "appearance", "scenario",
               "greeting", "system_prompt", "image_prompt", "avatar", "locked_tags",
-              "role", "moral_limits", "krea_token", "voice_transcript")
+              "role", "moral_limits", "krea_token", "voice_transcript", "visual_style")
     vals = {k: data.get(k, "") for k in fields}
+    vals["visual_style"] = normalize_visual_style(vals.get("visual_style"))
     # krea_force_physical : 1 par défaut (absent/vide/true → 1, sinon 0)
     raw_force = data.get("krea_force_physical", None)
     krea_force = 0 if raw_force in (0, "0", False, "false", "off") else 1
     with db() as c:
-        exists = c.execute("SELECT 1 FROM characters WHERE id=?", (cid,)).fetchone()
+        exists = c.execute("SELECT visual_style FROM characters WHERE id=?", (cid,)).fetchone()
+        # Old clients/edit paths that do not send the new field must not silently
+        # convert an Anime or Cartoon character back to Realistic.
+        if exists and "visual_style" not in data:
+            vals["visual_style"] = normalize_visual_style(exists["visual_style"])
         if exists:
             c.execute(
                 "UPDATE characters SET name=?, age=?, personality=?, appearance=?, scenario=?, "
                 "greeting=?, system_prompt=?, image_prompt=?, avatar=?, locked_tags=?, "
-                "role=?, moral_limits=?, krea_token=?, voice_transcript=?, krea_force_physical=? WHERE id=?",
+                "role=?, moral_limits=?, krea_token=?, voice_transcript=?, visual_style=?, "
+                "krea_force_physical=? WHERE id=?",
                 (*[vals[k] for k in fields], krea_force, cid),
             )
         else:
             c.execute(
                 "INSERT INTO characters(id, name, age, personality, appearance, scenario, "
                 "greeting, system_prompt, image_prompt, avatar, locked_tags, "
-                "role, moral_limits, krea_token, voice_transcript, krea_force_physical, created_at) "
-                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                "role, moral_limits, krea_token, voice_transcript, visual_style, "
+                "krea_force_physical, created_at) "
+                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (cid, *[vals[k] for k in fields], krea_force, time.time()),
             )
     # Initialiser char_memory depuis les memory_seeds si fournis (creation initiale)
@@ -2138,8 +2181,10 @@ def api_generate_in_chat(chat_id, message_id, with_persona=False, prompt=None, d
             hard_locked_identity = ", ".join(p for p in (locked, base) if p)
             prompt = build_t2i_image_prompt(msg["content"], settings, hard_locked_identity)
 
+    prompt = apply_visual_style(prompt, _character_visual_style(char))
+
     if dry_run:
-        return {"prompt": prompt, "mode": mode}
+        return {"prompt": prompt, "mode": mode, "visual_style": _character_visual_style(char)}
 
     # Conversation LoRA overrides drive the historical Flux stack. Krea 2 has two
     # dedicated slots, so do not consume an "apply once" override that is not applied.
@@ -2206,6 +2251,7 @@ def api_regenerate_image(message_id, keep_seed=False, prompt=None):
             base = (char.get("image_prompt") or "").strip() if char else ""
             hard_locked_identity = ", ".join(p for p in (locked, base) if p)
             prompt = build_t2i_image_prompt(msg["content"], settings, hard_locked_identity)
+    prompt = apply_visual_style(prompt, _character_visual_style(char))
     if krea_active:
         img, used_seed = generate_t2i(prompt, settings, seed=seed, family="krea2")
     elif avatar:
@@ -2395,8 +2441,9 @@ def api_generate_emotion_portrait(character_id, emotion, dry_run=False, prompt=N
                 "readable at a glance. The facial expression is the main focus. Never make the "
                 f"expression subtle, neutral or ambiguous. {emotion_hint}."
             )
+    prompt = apply_visual_style(prompt, _character_visual_style(char))
     if dry_run:
-        return {"prompt": prompt, "emotion": emotion}
+        return {"prompt": prompt, "emotion": emotion, "visual_style": _character_visual_style(char)}
     if krea_active:
         img, used_seed = generate_t2i(prompt, settings, family="krea2")
     else:
@@ -4977,8 +5024,9 @@ def api_avatar_generate(character_id, keep_seed=False, variant="", prompt=None, 
         else:
             extra = VARIANT_TAGS.get(variant, "")
             prompt = compose_image_prompt(char, extra=extra)
+    prompt = apply_visual_style(prompt, _character_visual_style(char))
     if dry_run:
-        return {"prompt": prompt}
+        return {"prompt": prompt, "visual_style": _character_visual_style(char)}
     seed = char.get("last_seed") if (keep_seed and char.get("last_seed") is not None) else None
     if krea_active:
         img, used_seed = generate_t2i(prompt, settings, seed=seed, family="krea2")
@@ -5046,8 +5094,8 @@ def _en_phrase(field, value):
     return entry.get("image_tag") or entry.get("en") or value
 
 
-def _preview_prompt(field, value, gender=""):
-    """Prompt d'apercu 512x512 en anglais, adapte au genre choisi. Nudite autorisee (adultes)."""
+def _preview_prompt(field, value, gender="", visual_style="realistic"):
+    """Prompt d'apercu 512x512, isolated for realistic/anime/cartoon creators."""
     noun = _gender_noun(gender)
     base = ("professional photo, neutral light gray studio background, soft even lighting, "
             "sharp focus, adult, 25 years old")
@@ -5072,14 +5120,15 @@ def _preview_prompt(field, value, gender=""):
         subj = f"a portrait of a {noun} with a {_en_phrase('coiffure', value)} hairstyle, hair clearly visible, head and shoulders"
     else:
         subj = value
-    return f"{base}, {subj}"
+    return apply_visual_style(f"{base}, {subj}", visual_style)
 
 
-def api_config_preview(field, value, gender="", regen=False):
-    """Generate (or return) a configurator preview, cached per image family."""
+def api_config_preview(field, value, gender="", visual_style="realistic", regen=False):
+    """Generate (or return) a preview, cached per image family and creator style."""
     field = (field or "").strip()
     value = (value or "").strip()
     gender = (gender or "").strip()
+    visual_style = normalize_visual_style(visual_style)
     if field == "genre":
         gender = ""           # the gender preview does not depend on another gender
     if not field or not value:
@@ -5088,13 +5137,15 @@ def api_config_preview(field, value, gender="", regen=False):
     preview_family = (settings.get("image_family") or "flux2_klein").strip()
     with db() as c:
         row = c.execute(
-            "SELECT image FROM option_previews WHERE field=? AND value=? AND gender=? AND family=?",
-            (field, value, gender, preview_family),
+            "SELECT image FROM option_previews "
+            "WHERE field=? AND value=? AND gender=? AND family=? AND visual_style=?",
+            (field, value, gender, preview_family, visual_style),
         ).fetchone()
     if row and not regen:
         return {"field": field, "value": value, "gender": gender,
-                "family": preview_family, "image": row["image"], "cached": True}
-    prompt = _preview_prompt(field, value, gender)
+                "family": preview_family, "visual_style": visual_style,
+                "image": row["image"], "cached": True}
+    prompt = _preview_prompt(field, value, gender, visual_style)
     # seed fixe pour les champs de morphologie : assure la meme base pour comparer
     fixed_seed = PREVIEW_SEED_FIXED if field in PREVIEW_SEED_FIELDS else None
     if (settings.get("image_family") or "").strip() == "krea2":
@@ -5109,21 +5160,25 @@ def api_config_preview(field, value, gender="", regen=False):
                                   seed=fixed_seed, workflow="preview.json")
     with db() as c:
         c.execute(
-            "INSERT OR REPLACE INTO option_previews(field, value, gender, family, image, created_at) "
-            "VALUES (?,?,?,?,?,?)",
-            (field, value, gender, preview_family, img, time.time()),
+            "INSERT OR REPLACE INTO option_previews("
+            "field, value, gender, family, visual_style, image, created_at) "
+            "VALUES (?,?,?,?,?,?,?)",
+            (field, value, gender, preview_family, visual_style, img, time.time()),
         )
     return {"field": field, "value": value, "gender": gender,
-            "family": preview_family, "image": img, "cached": False}
+            "family": preview_family, "visual_style": visual_style,
+            "image": img, "cached": False}
 
 
-def api_config_previews():
-    """Return cached configurator previews for the currently selected image family."""
+def api_config_previews(visual_style="realistic"):
+    """Return cached previews for the selected engine and one isolated creator style."""
     family = (get_settings().get("image_family") or "flux2_klein").strip()
+    visual_style = normalize_visual_style(visual_style)
     with db() as c:
         rows = c.execute(
-            "SELECT field, value, gender, image FROM option_previews WHERE family=?",
-            (family,),
+            "SELECT field, value, gender, image FROM option_previews "
+            "WHERE family=? AND visual_style=?",
+            (family, visual_style),
         ).fetchall()
     out = {}
     for r in rows:
@@ -5247,6 +5302,21 @@ def api_generate_background(chat_id, message_id, prompt=None, dry_run=False):
         if not msg:
             raise RuntimeError("Message not found.")
     msg = dict(msg)
+    with db() as c:
+        style_row = None
+        if msg.get("character_id"):
+            style_row = c.execute(
+                "SELECT visual_style FROM characters WHERE id=?",
+                (msg.get("character_id"),),
+            ).fetchone()
+        if not style_row:
+            style_row = c.execute(
+                "SELECT ch.visual_style FROM chat_members cm "
+                "JOIN characters ch ON ch.id=cm.character_id "
+                "WHERE cm.chat_id=? ORDER BY cm.rowid LIMIT 1",
+                (chat_id,),
+            ).fetchone()
+    background_style = normalize_visual_style(style_row["visual_style"] if style_row else "realistic")
     if prompt is None:
         # Prompt de fond : decor, ambiance, sans personnage
         image_model_name = "Krea 2" if (settings.get("image_family") or "") == "krea2" else "FLUX.2"
@@ -5256,8 +5326,9 @@ def api_generate_background(chat_id, message_id, prompt=None, dry_run=False):
         messages = [{"role": "system", "content": sysmsg},
                     {"role": "user", "content": msg["content"]}]
         prompt = llm_util_chat(messages, settings, max_tokens=100, temperature=0.7).strip()
+    prompt = apply_visual_style(prompt, background_style)
     if dry_run:
-        return {"prompt": prompt}
+        return {"prompt": prompt, "visual_style": background_style}
     img, used_seed = generate_t2i(prompt, settings)
     # On stocke ce fond dans la galerie du 1er personnage de la conversation
     with db() as c:
@@ -5296,7 +5367,7 @@ _SHARE_IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp"}
 _SHARE_CHARACTER_FIELDS = (
     "name", "age", "personality", "appearance", "scenario", "greeting",
     "system_prompt", "image_prompt", "locked_tags", "role", "moral_limits",
-    "krea_token", "krea_force_physical",
+    "krea_token", "krea_force_physical", "visual_style",
 )
 _SHARE_SCENARIO_FIELDS = (
     "title", "place", "mood_theme", "theme", "relationship",
@@ -6254,6 +6325,10 @@ def api_group_image(chat_id, message_id, with_persona=False, prompt=None, dry_ru
         if not msg:
             raise RuntimeError("Message not found.")
     active = [m for m in _active_members(chat_id) if m.get("active", 1)]
+    msg = dict(msg)
+    style_source = next((m for m in active if m.get("id") == msg.get("character_id")),
+                        active[0] if active else {})
+    group_style = _character_visual_style(style_source)
     members = active if krea_active else [m for m in active if m.get("avatar")]
     if not members:
         requirement = "active character" if krea_active else "active character with an avatar"
@@ -6262,9 +6337,11 @@ def api_group_image(chat_id, message_id, with_persona=False, prompt=None, dry_ru
     if krea_active:
         if prompt is None:
             prompt = build_krea_multi_subject_prompt(
-                dict(msg)["content"], settings, members, include_persona=with_persona)
+                msg["content"], settings, members, include_persona=with_persona)
+        prompt = apply_visual_style(prompt, group_style)
         if dry_run:
-            return {"prompt": prompt, "refs": 0, "engine": "krea2"}
+            return {"prompt": prompt, "refs": 0, "engine": "krea2",
+                    "visual_style": group_style}
         img, used_seed = generate_t2i(prompt, settings, family="krea2")
     else:
         image_list, names = [], []
@@ -6279,9 +6356,11 @@ def api_group_image(chat_id, message_id, with_persona=False, prompt=None, dry_ru
         if len(image_list) > 4:
             image_list, names = image_list[:4], names[:4]
         if prompt is None:
-            prompt = build_multiref_image_prompt(dict(msg)["content"], settings, names)
+            prompt = build_multiref_image_prompt(msg["content"], settings, names)
+        prompt = apply_visual_style(prompt, group_style)
         if dry_run:
-            return {"prompt": prompt, "refs": len(image_list), "engine": "flux2_klein"}
+            return {"prompt": prompt, "refs": len(image_list), "engine": "flux2_klein",
+                    "visual_style": group_style}
         workflow = (settings.get("duo_workflow", "duo.json") if len(image_list) <= 2
                     else settings.get("group_workflow", "group4.json"))
         img, used_seed = generate_group(prompt, image_list, settings, workflow=workflow)
@@ -6561,7 +6640,7 @@ class Handler(BaseHTTPRequestHandler):
             if path == "/api/memory":
                 return self._json(api_memory_list(qs.get("character_id", [""])[0]))
             if path == "/api/config/previews":
-                return self._json(api_config_previews())
+                return self._json(api_config_previews(qs.get("visual_style", ["realistic"])[0]))
             if path == "/api/char_memory":
                 cid = qs.get("character_id", [""])[0]
                 return self._json(get_char_memory(cid))
@@ -6869,10 +6948,14 @@ class Handler(BaseHTTPRequestHandler):
                 cid = body.get("id")
                 if not cid:
                     settings = get_settings()
+                    visual_style = normalize_visual_style(body.get("visual_style"))
+                    styled_prompt = apply_visual_style(
+                        body.get("prompt") or body.get("image_prompt", ""), visual_style)
                     if body.get("dry_run"):
-                        return self._json({"prompt": body.get("image_prompt", "")})
-                    img, seed = generate_t2i(body.get("prompt") or body.get("image_prompt", ""), settings)
-                    return self._json({"image": img, "seed": seed})
+                        return self._json({"prompt": styled_prompt, "visual_style": visual_style})
+                    img, seed = generate_t2i(styled_prompt, settings)
+                    return self._json({"image": img, "seed": seed,
+                                       "prompt": styled_prompt, "visual_style": visual_style})
                 res = api_avatar_generate(cid, keep_seed=bool(body.get("keep_seed")),
                                           variant=body.get("variant", ""),
                                           prompt=body.get("prompt"), dry_run=bool(body.get("dry_run")),
@@ -7275,6 +7358,7 @@ class Handler(BaseHTTPRequestHandler):
             if path == "/api/config/preview":
                 return self._json(api_config_preview(body.get("field"), body.get("value"),
                                                      gender=body.get("gender", ""),
+                                                     visual_style=body.get("visual_style", "realistic"),
                                                      regen=bool(body.get("regen"))))
 
             if path == "/api/comfy/free":

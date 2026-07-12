@@ -3,8 +3,8 @@
     "lang": "es",
     "name": "Español",
     "fallback": "en",
-    "version": "40.0.8",
-    "generated": "2026-07-12T13:15:58.174592"
+    "version": "40.0.9",
+    "generated": "2026-07-12T20:07:04.717072"
   },
   "nav": {
     "characters": "Personajes",
@@ -326,7 +326,18 @@
       "title": "Ayudas de escritura"
     },
     "share_hint": "Paquete público: nunca se incluyen conversaciones, recuerdos personales, voz ni ajustes.",
-    "share_btn": "📤 Compartir"
+    "share_btn": "📤 Compartir",
+    "visual_style": {
+      "title": "Elige un creador visual",
+      "hint": "Cada creador conserva su propio borrador y su propia biblioteca de vistas previas.",
+      "realistic_title": "Creador realista",
+      "realistic_desc": "Generación fotorrealista actual, sin cambios.",
+      "anime_title": "Creador anime",
+      "anime_desc": "Prompts anime y una biblioteca de vistas previas anime independiente.",
+      "cartoon_title": "Creador cartoon",
+      "cartoon_desc": "Prompts cartoon y una biblioteca de vistas previas cartoon independiente.",
+      "switched": "Sección activa: {style}"
+    }
   },
   "chat": {
     "title": "Conversaciones",
@@ -1164,6 +1175,6 @@
     "global_engine_label": "Motor de imagen global"
   },
   "meta": {
-    "version": "40.0.8"
+    "version": "40.0.9"
   }
 }

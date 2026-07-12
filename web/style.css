@@ -330,6 +330,46 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent); outline
   background: var(--accent-dk); padding: 1px 6px; border-radius: 6px;
 }
 
+
+/* ---------- Three isolated visual character creators ---------- */
+.creator-style-section {
+  margin: 8px 0 20px; padding: 14px; border: 1px solid var(--line);
+  border-radius: 14px; background: color-mix(in srgb, var(--panel-2) 72%, transparent);
+}
+.creator-style-tabs {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px; margin-top: 10px;
+}
+.creator-style-card {
+  min-height: 92px; display: flex; align-items: center; gap: 10px; text-align: left;
+  padding: 12px; border-radius: 12px; border: 1px solid var(--line);
+  background: var(--panel); color: var(--text); cursor: pointer;
+  transition: border-color .15s ease, transform .15s ease, box-shadow .15s ease;
+}
+.creator-style-card:hover { border-color: var(--accent-dk); transform: translateY(-1px); }
+.creator-style-card.active {
+  border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft);
+  background: color-mix(in srgb, var(--accent-soft) 38%, var(--panel));
+}
+.creator-style-card span:last-child { display: flex; flex-direction: column; gap: 4px; }
+.creator-style-card small { color: var(--muted); line-height: 1.25; }
+.creator-style-icon { font-size: 28px; line-height: 1; }
+.creator-style-current {
+  border: 1px solid var(--accent); color: var(--accent); border-radius: 999px;
+  padding: 5px 10px; font-size: 12px; white-space: nowrap;
+}
+.char-style-badge {
+  display: inline-flex; width: fit-content; margin-top: 4px; padding: 2px 7px;
+  border-radius: 999px; font-size: 11px; color: var(--muted);
+  border: 1px solid var(--line); background: var(--panel-2);
+}
+.char-style-badge.anime { color: #d946ef; }
+.char-style-badge.cartoon { color: #f59e0b; }
+@media (max-width: 900px) {
+  .creator-style-tabs { grid-template-columns: 1fr; }
+  .creator-style-card { min-height: 72px; }
+}
+
 /* ---------- Widget d'humeur ---------- */
 .mood-bar {
   display: flex; align-items: center; gap: 10px; flex-wrap: wrap;

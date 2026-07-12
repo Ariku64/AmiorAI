@@ -6,8 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>AmiorAI</title>
   <link rel="icon" type="image/png" href="/logo-icon-square.png">
-  <link rel="stylesheet" href="/style.css?v=40.0.8">
-  <link rel="stylesheet" href="/icons.css?v=40.0.8">
+  <link rel="stylesheet" href="/style.css?v=40.0.9">
+  <link rel="stylesheet" href="/icons.css?v=40.0.9">
   <script>
     // Applique le theme AVANT le premier rendu (evite un flash de mauvais theme).
     // "system" = pas d'attribut data-theme : le CSS suit alors prefers-color-scheme
@@ -100,8 +100,36 @@
         <input type="file" id="char-import-input" accept=".amiorchar,.json,application/zip,application/json" style="display:none;">
       </p>
 
-      <div class="panel">
+      <div class="panel creator-panel" data-creator-style-active="realistic">
         <h2 data-i18n="char.creation_title">Assisted creation</h2>
+
+        <div class="creator-style-section">
+          <div class="row" style="justify-content:space-between; align-items:flex-start; gap:12px;">
+            <div>
+              <strong data-i18n="char.visual_style.title">Choose a visual creator</strong>
+              <p class="hint" data-i18n="char.visual_style.hint">Each creator keeps its own draft and its own preview library.</p>
+            </div>
+            <span id="cg-style-current" class="creator-style-current" data-i18n="char.visual_style.realistic_title">Realistic creator</span>
+          </div>
+          <div id="cg-style-tabs" class="creator-style-tabs" role="tablist" aria-label="Visual creator">
+            <button type="button" class="creator-style-card active" data-creator-style="realistic" role="tab" aria-selected="true">
+              <span class="creator-style-icon">📷</span>
+              <span><strong data-i18n="char.visual_style.realistic_title">Realistic creator</strong>
+              <small data-i18n="char.visual_style.realistic_desc">Current photorealistic generation, unchanged.</small></span>
+            </button>
+            <button type="button" class="creator-style-card" data-creator-style="anime" role="tab" aria-selected="false">
+              <span class="creator-style-icon">🌸</span>
+              <span><strong data-i18n="char.visual_style.anime_title">Anime creator</strong>
+              <small data-i18n="char.visual_style.anime_desc">Anime prompts and a separate anime preview library.</small></span>
+            </button>
+            <button type="button" class="creator-style-card" data-creator-style="cartoon" role="tab" aria-selected="false">
+              <span class="creator-style-icon">🎨</span>
+              <span><strong data-i18n="char.visual_style.cartoon_title">Cartoon creator</strong>
+              <small data-i18n="char.visual_style.cartoon_desc">Cartoon prompts and a separate cartoon preview library.</small></span>
+            </button>
+          </div>
+        </div>
+
         <label data-i18n="char.brief_label">Describe the idea in a few words</label>
         <textarea id="cg-brief" placeholder="Briefly describe the character, their role and tone…" data-i18n-placeholder="char.brief_placeholder"></textarea>
 
@@ -124,6 +152,7 @@
 
         <div id="cg-form" style="display:none; margin-top:18px;">
           <input type="hidden" id="f-id">
+          <input type="hidden" id="f-visual_style" value="realistic">
           <div class="row" style="gap:14px;">
             <div style="flex:2; min-width:200px;">
               <label data-i18n="char.form.name_label">Name</label><input id="f-name">
@@ -1286,7 +1315,7 @@
   </main>
 
   <div id="modal-root"></div>
-  <script src="/icons.js?v=40.0.8"></script>
-  <script src="/app.js?v=40.0.8"></script>
+  <script src="/icons.js?v=40.0.9"></script>
+  <script src="/app.js?v=40.0.9"></script>
 </body>
 </html>

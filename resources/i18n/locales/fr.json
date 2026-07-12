@@ -3,8 +3,8 @@
     "lang": "fr",
     "name": "Français",
     "fallback": "en",
-    "version": "40.0.8",
-    "generated": "2026-07-12T13:15:58.174592"
+    "version": "40.0.9",
+    "generated": "2026-07-12T20:07:04.717072"
   },
   "nav": {
     "characters": "Personnages",
@@ -326,7 +326,18 @@
       "title": "Assistants de style"
     },
     "share_hint": "Paquet public : les conversations, mémoires personnelles, voix et réglages ne sont jamais inclus.",
-    "share_btn": "📤 Partager"
+    "share_btn": "📤 Partager",
+    "visual_style": {
+      "title": "Choisir un créateur visuel",
+      "hint": "Chaque créateur conserve son propre brouillon et sa propre bibliothèque d’aperçus.",
+      "realistic_title": "Créateur réaliste",
+      "realistic_desc": "Génération photoréaliste actuelle, sans changement.",
+      "anime_title": "Créateur anime",
+      "anime_desc": "Prompts anime et bibliothèque d’aperçus anime séparée.",
+      "cartoon_title": "Créateur cartoon",
+      "cartoon_desc": "Prompts cartoon et bibliothèque d’aperçus cartoon séparée.",
+      "switched": "Section active : {style}"
+    }
   },
   "chat": {
     "title": "Conversations",
@@ -1164,6 +1175,6 @@
     "global_engine_label": "Moteur d’image global"
   },
   "meta": {
-    "version": "40.0.8"
+    "version": "40.0.9"
   }
 }
