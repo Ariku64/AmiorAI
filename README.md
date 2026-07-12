@@ -14,7 +14,7 @@
 
 <p align="center">
   <a href="https://discord.gg/wYqhQBJV5z">
-    <img src="https://img.shields.io/badge/Join%20the%20Discord-5865F2?style=for-the-badge\\\\\\\&logo=discord\\\\\\\&logoColor=white" alt="Join the AmiorAI Discord">
+    <img src="https://img.shields.io/badge/Join%20the%20Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Join the AmiorAI Discord">
   </a>
 </p>
 
@@ -73,17 +73,17 @@ No model weights are bundled in the repository or release archive.
 
 ## Quick installation
 
-### 1\. Download and extract
+### 1. Download and extract
 
 Download the latest AmiorAI archive from the GitHub **Releases** page. Extract it into a writable folder such as:
 
 ```text
-D:\\\\\\\\AmiorAI
+D:\AmiorAI
 ```
 
 Do not run AmiorAI directly from inside the ZIP archive.
 
-### 2\. Install AmiorAI
+### 2. Install AmiorAI
 
 Run:
 
@@ -93,7 +93,7 @@ install.bat
 
 The installer downloads an official isolated Python Embedded runtime for AmiorAI and installs the required Python packages. It does not install LM Studio, ComfyUI or AI model weights.
 
-### 3\. Start the application
+### 3. Start the application
 
 Run:
 
@@ -107,7 +107,7 @@ The local interface opens at:
 http://127.0.0.1:8800
 ```
 
-### 4\. Connect LM Studio
+### 4. Connect LM Studio
 
 1. Install and open LM Studio.
 2. Download and load a chat/instruction model.
@@ -120,7 +120,7 @@ http://127.0.0.1:1234/v1
 
 5. In AmiorAI, open **Settings → Language model**, refresh the model list, select a conversation model and test it.
 
-### 5\. Connect ComfyUI for images
+### 5. Connect ComfyUI for images
 
 1. Install and start ComfyUI.
 2. In AmiorAI, open **Settings → ComfyUI**.
@@ -134,18 +134,18 @@ http://127.0.0.1:8188
 
 6. Open **Diagnostics** and fix every critical red item before generating an image.
 
-### 6\. Install local voice, optional
+### 6. Install local voice, optional
 
 For the recommended Chatterbox engine, run:
 
 ```text
-tts\\\\\\\_server\\\\\\\\install.bat
+tts_server\install.bat
 ```
 
 For the optional experimental Qwen engine, run:
 
 ```text
-tts\\\\\\\_server\\\\\\\\install\\\\\\\_qwen.bat
+tts_server\install_qwen.bat
 ```
 
 Both engines use separate Python Embedded runtimes and do not require a system Python installation.
@@ -163,7 +163,7 @@ A simple first session is:
 7. Use **Bring this scene to life** to generate the current scene.
 8. Use **▶ Listen** below a character reply after enabling TTS.
 9. Review generated images in **Gallery**.
-10. Back up `%LOCALAPPDATA%\\\\\\\\AmiorAI\\\\\\\\data` before major upgrades.
+10. Back up `%LOCALAPPDATA%\AmiorAI\data` before major upgrades.
 
 ## Documentation
 
@@ -182,7 +182,7 @@ A simple first session is:
 
 # Full installation and configuration
 
-## 1\. Requirements
+## 1. Requirements
 
 ### Required for the main application
 
@@ -209,7 +209,7 @@ A 16 GB GPU can work well when AmiorAI’s VRAM release options are enabled, but
 
 Avoid unofficial repacks from unknown sources.
 
-## 2\. Install AmiorAI
+## 2. Install AmiorAI
 
 1. Extract the complete archive.
 2. Run `install.bat`.
@@ -218,9 +218,9 @@ Avoid unofficial repacks from unknown sources.
 5. Wait for the installation-complete message.
 6. Start AmiorAI with `start.bat`.
 
-The main application runtime is stored in `python\\\\\\\_embed`. It is independent from the two optional TTS runtimes.
+The main application runtime is stored in `python_embed`. It is independent from the two optional TTS runtimes.
 
-## 3\. Configure LM Studio
+## 3. Configure LM Studio
 
 AmiorAI uses LM Studio for the conversation model and, optionally, a separate utility model.
 
@@ -262,7 +262,7 @@ http://127.0.0.1:1234/v1
 
 If a model does not appear, verify that the LM Studio server is running and that `/v1/models` exposes the expected model ID.
 
-## 4\. Configure ComfyUI
+## 4. Configure ComfyUI
 
 AmiorAI communicates with ComfyUI through its local API.
 
@@ -278,10 +278,10 @@ Typical paths:
 
 ```text
 ComfyUI folder:
-D:\\\\\\\\ComfyUI\\\\\\\_windows\\\\\\\_portable\\\\\\\\ComfyUI
+D:\ComfyUI_windows_portable\ComfyUI
 
 ComfyUI Python:
-D:\\\\\\\\ComfyUI\\\\\\\_windows\\\\\\\_portable\\\\\\\\python\\\\\\\_embeded\\\\\\\\python.exe
+D:\ComfyUI_windows_portable\python_embeded\python.exe
 ```
 
 The selected ComfyUI folder must directly contain `main.py`.
@@ -312,7 +312,7 @@ These installations are supported as long as:
 6. Save the section.
 7. Open **Diagnostics** and test ComfyUI.
 
-## 5\. Image models
+## 5. Image models
 
 AmiorAI does not redistribute image model weights. Download models only from sources you trust and read their licences.
 
@@ -322,22 +322,22 @@ The bundled unified Krea 2 workflow expects selectable components such as:
 
 ```text
 Diffusion model:
-krea2\\\\\\\_turbo\\\\\\\_fp8\\\\\\\_scaled.safetensors
+krea2_turbo_fp8_scaled.safetensors
 
 Text encoder:
-qwen3vl\\\\\\\_4b\\\\\\\_fp8\\\\\\\_scaled.safetensors
+qwen3vl_4b_fp8_scaled.safetensors
 
 VAE:
-qwen\\\\\\\_image\\\\\\\_vae.safetensors
+qwen_image_vae.safetensors
 ```
 
 Typical folders:
 
 ```text
-ComfyUI\\\\\\\\models\\\\\\\\diffusion\\\\\\\_models\\\\\\\\
-ComfyUI\\\\\\\\models\\\\\\\\text\\\\\\\_encoders\\\\\\\\
-ComfyUI\\\\\\\\models\\\\\\\\vae\\\\\\\\
-ComfyUI\\\\\\\\models\\\\\\\\loras\\\\\\\\
+ComfyUI\models\diffusion_models\
+ComfyUI\models\text_encoders\
+ComfyUI\models\vae\
+ComfyUI\models\loras\
 ```
 
 Inside **Studio Image**:
@@ -371,7 +371,7 @@ Inside **Studio Image**:
 
 The GGUF mode requires a ComfyUI installation providing `UnetLoaderGGUF`.
 
-## 6\. Missing ComfyUI nodes
+## 6. Missing ComfyUI nodes
 
 When Diagnostics reports missing nodes:
 
@@ -393,7 +393,7 @@ EmptyFlux2LatentImage
 
 Custom nodes execute Python code on your computer. Install only packages and authors you trust.
 
-## 7\. Voice system
+## 7. Voice system
 
 AmiorAI v40 provides two fully local voice engines:
 
@@ -405,13 +405,13 @@ AmiorAI v40 provides two fully local voice engines:
 Run:
 
 ```text
-tts\\\\\\\_server\\\\\\\\install.bat
+tts_server\install.bat
 ```
 
 This creates:
 
 ```text
-tts\\\\\\\_server\\\\\\\\python\\\\\\\_chatterbox
+tts_server\python_chatterbox
 ```
 
 The installer uses an isolated official Python 3.11.9 Embedded runtime.
@@ -419,7 +419,7 @@ The installer uses an isolated official Python 3.11.9 Embedded runtime.
 If AmiorAI reports `No module named 'chatterbox'`, close AmiorAI and run:
 
 ```text
-tts\\\\\\\_server\\\\\\\\repair\\\\\\\_chatterbox.bat
+tts_server\repair_chatterbox.bat
 ```
 
 Wait for `Chatterbox import: OK`, then restart AmiorAI.
@@ -429,13 +429,13 @@ Wait for `Chatterbox import: OK`, then restart AmiorAI.
 Run:
 
 ```text
-tts\\\\\\\_server\\\\\\\\install\\\\\\\_qwen.bat
+tts_server\install_qwen.bat
 ```
 
 This creates the independent runtime:
 
 ```text
-tts\\\\\\\_server\\\\\\\\python\\\\\\\_qwen
+tts_server\python_qwen
 ```
 
 For the strongest Qwen clone, enter the exact words spoken in the reference sample in the character’s **Voice sample transcript** field. The transcript is optional for Chatterbox.
@@ -480,7 +480,7 @@ CPU TTS is not stopped because it consumes no GPU VRAM.
 
 # Daily use guide
 
-## 1\. Create a character
+## 1. Create a character
 
 Open **Characters** and create a new entry. The most important fields are:
 
@@ -494,7 +494,7 @@ Open **Characters** and create a new entry. The most important fields are:
 
 A precise personality description usually produces more consistent replies than a long list of vague adjectives.
 
-## 2\. Start a conversation
+## 2. Start a conversation
 
 1. Select a character.
 2. Create a conversation.
@@ -504,7 +504,7 @@ A precise personality description usually produces more consistent replies than 
 
 The selected language model, context size, output length and temperature are controlled in Settings.
 
-## 3\. Generate a scene from the chat
+## 3. Generate a scene from the chat
 
 Use **Bring this scene to life** to build an image prompt from the recent conversation. AmiorAI combines the selected character, relevant persona information and the current scene.
 
@@ -512,7 +512,7 @@ Use **Character only** when the image must contain only the selected character.
 
 Before generation, review the editable prompt when precision matters.
 
-## 4\. Use Image Studio
+## 4. Use Image Studio
 
 Image Studio is intended for manual generations independent from a conversation. It provides:
 
@@ -523,7 +523,7 @@ Image Studio is intended for manual generations independent from a conversation.
 * LoRA selection and strength;
 * generation history.
 
-## 5\. Use a persona
+## 5. Use a persona
 
 The optional persona represents the user or a recurring second subject. It can include:
 
@@ -535,7 +535,7 @@ The optional persona represents the user or a recurring second subject. It can i
 
 Persona information is used only when the selected workflow and scene need it.
 
-## 6\. Manage LoRAs and model folders
+## 6. Manage LoRAs and model folders
 
 Use the model library and LoRA pages to:
 
@@ -548,11 +548,11 @@ Use the model library and LoRA pages to:
 
 Avoid placing personal API tokens or paid model files in the Git repository.
 
-## 7\. Gallery and user files
+## 7. Gallery and user files
 
 Generated images and imported files are stored in AmiorAI’s local data directory. Use Gallery to review generated content. Back up the data directory regularly.
 
-## 8\. Mobile/LAN mode
+## 8. Mobile/LAN mode
 
 The mobile interface is intended for a trusted private network.
 
@@ -570,7 +570,7 @@ The mobile interface is intended for a trusted private network.
 On Windows, persistent data is normally stored in:
 
 ```text
-%LOCALAPPDATA%\\\\\\\\AmiorAI\\\\\\\\data
+%LOCALAPPDATA%\AmiorAI\data
 ```
 
 It can contain:
@@ -588,7 +588,7 @@ The source/application folder and the persistent data folder are separate. Remov
 ## Before updating
 
 1. Close AmiorAI.
-2. Back up `%LOCALAPPDATA%\\\\\\\\AmiorAI\\\\\\\\data`.
+2. Back up `%LOCALAPPDATA%\AmiorAI\data`.
 3. Extract the new release into a clean application folder unless the release notes explicitly describe a hotfix overlay.
 4. Do not copy old Python runtimes over newer ones unless instructed.
 5. Start the new release and run Diagnostics.
@@ -602,13 +602,13 @@ The source/application folder and the persistent data folder are separate. Remov
 Close AmiorAI and run:
 
 ```text
-tts\\\\\\\_server\\\\\\\\repair\\\\\\\_chatterbox.bat
+tts_server\repair_chatterbox.bat
 ```
 
 Detailed installation logs are written to:
 
 ```text
-tts\\\\\\\_server\\\\\\\\install\\\\\\\_chatterbox\\\\\\\_pip.log
+tts_server\install_chatterbox_pip.log
 ```
 
 ## The ▶ Listen button is missing
@@ -637,7 +637,7 @@ Use v40.0.3 or later. In **Settings → Voice / TTS**, enable TTS and save the v
 * select the exact ComfyUI Python executable;
 * verify port `8188`;
 * start ComfyUI manually and disable auto-launch;
-* inspect `%LOCALAPPDATA%\\\\\\\\AmiorAI\\\\\\\\data\\\\\\\\logs\\\\\\\\comfyui.log`.
+* inspect `%LOCALAPPDATA%\AmiorAI\data\logs\comfyui.log`.
 
 ## A model is absent from a selector
 
@@ -677,13 +677,13 @@ Important root files:
 
 ```text
 README.md                English GitHub documentation
-README\\\\\\\_FR.md             French GitHub documentation
+README_FR.md             French GitHub documentation
 install.bat              main Windows installer
 start.bat                standard Windows launcher
 LICENSE                  Apache License 2.0
 NOTICE                   AmiorAI copyright notice
-LEGAL\\\\\\\_NOTICE.md          disclaimer and user responsibilities
-THIRD\\\\\\\_PARTY\\\\\\\_NOTICES.md   external component licences and sources
+LEGAL_NOTICE.md          disclaimer and user responsibilities
+THIRD_PARTY_NOTICES.md   external component licences and sources
 .gitignore               local runtimes, models and personal data exclusions
 ```
 
@@ -695,7 +695,6 @@ THIRD\\\\\\\_PARTY\\\\\\\_NOTICES.md   external component licences and sources
 
 The original AmiorAI source code is licensed under the **Apache License 2.0**. See [`LICENSE`](LICENSE) and [`NOTICE`](NOTICE).
 
-AmiorAI is provided **as is**, without warranty. The user remains responsible for installed models, LoRAs, prompts, generated content, backups, hardware stability, privacy, voice rights and compliance with applicable law. Read [`LEGAL\\\\\\\_NOTICE.md`](LEGAL_NOTICE.md) before installing or sharing the application.
+AmiorAI is provided **as is**, without warranty. The user remains responsible for installed models, LoRAs, prompts, generated content, backups, hardware stability, privacy, voice rights and compliance with applicable law. Read [`LEGAL_NOTICE.md`](LEGAL_NOTICE.md) before installing or sharing the application.
 
-Third-party applications, Python packages, model weights, LoRAs, workflows and custom nodes remain governed by their own licences. See [`THIRD\\\\\\\_PARTY\\\\\\\_NOTICES.md`](THIRD_PARTY_NOTICES.md).
-
+Third-party applications, Python packages, model weights, LoRAs, workflows and custom nodes remain governed by their own licences. See [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).

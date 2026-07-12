@@ -23,6 +23,7 @@
 </p>
 
 ---
+
 ## Qu’est-ce qu’AmiorAI ?
 
 AmiorAI est une application locale permettant de créer des personnages IA et de discuter avec eux au sein de conversations persistantes. Elle se connecte à des logiciels exécutés sur votre propre ordinateur :
