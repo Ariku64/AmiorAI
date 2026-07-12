@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="README\_FR.md">Français</a> · <strong>English</strong>
+  <a href="./README\_FR.md">Français</a> · <strong>English</strong>
 </p>
 
 <p align="center">
