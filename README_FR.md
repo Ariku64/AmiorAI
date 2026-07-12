@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  Version actuelle : <strong>v40.0.7</strong> · Windows 10/11 · Apache-2.0
+  Version actuelle : <strong>v40.0.8</strong> · Windows 10/11 · Apache-2.0
 </p>
 
 <p align="center">
@@ -43,6 +43,7 @@ L’interface, les personnages, les conversations, les mémoires, les images et 
 |---|---|
 | Conversations locales | Connexion au serveur compatible OpenAI de LM Studio. |
 | Création de personnages | Personnalité, scénario, message d’accueil, description physique, avatar et voix. |
+| Paquets partageables | Export/import public des personnages avec fiche, avatar et visages d’humeur, ainsi que des scénarios portables. |
 | Mémoire persistante | Conservation des personnages et conversations entre les sessions. |
 | Affichage roleplay | Rendu distinct des dialogues, narrations et expressions. |
 | Génération d’images | Workflows Flux 2 Klein avec références et workflow unifié Krea 2. |

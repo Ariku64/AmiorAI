@@ -1,6 +1,17 @@
 # AmiorAI — Journal des modifications
 
 
+## v40.0.8 — 12 juillet 2026
+
+### Personnages et scénarios partageables
+
+- Nouveau format `.amiorchar` pour partager une fiche de personnage avec son avatar et ses visages d’humeur déjà générés.
+- Nouveau format `.amiorscenario` pour exporter et importer un scénario narratif.
+- Les paquets publics excluent volontairement conversations, mémoire personnelle, galerie, statistiques d’humeur, voix, réglages et identifiants locaux.
+- Import compatible avec les anciens exports JSON de personnages et avec les scénarios JSON simples.
+- Validation de sécurité des archives : taille limitée, chemins protégés contre le traversal, types d’images contrôlés et fichiers chiffrés refusés.
+- Traductions FR/EN/ES/DE et fichier maître `translations_master.xlsx` mis à jour.
+
 ## v40.0.7 — 12 juillet 2026
 
 ### ComfyUI tiers uniquement

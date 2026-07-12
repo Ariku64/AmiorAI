@@ -40,6 +40,15 @@ async function api(path, method = "GET", body = null) {
   return data;
 }
 
+async function uploadShareFile(path, file) {
+  const form = new FormData();
+  form.append("file", file, file.name || "share-package");
+  const r = await fetch(path, { method: "POST", body: form });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok || data.error) throw new Error(data.error || window.t("common.http_error", { status: r.status }));
+  return data;
+}
+
 let toastTimer;
 function toast(msg, isErr = false) {
   clearTimeout(toastTimer);
@@ -766,21 +775,19 @@ $("#cg-variant-go").addEventListener("click", (e) => {
 
 $("#cg-export-btn").addEventListener("click", () => {
   const id = $("#f-id").value;
-  if (id) window.open("/api/character/export?id=" + encodeURIComponent(id), "_blank");
+  if (id) window.location.href = "/api/share/character/export?id=" + encodeURIComponent(id);
 });
 
-// --- Import d'un personnage depuis un fichier JSON exporté ---
+// --- Import d’un personnage partagé (.amiorchar ou ancien JSON) ---
 const _charImportBtn = $("#char-import-btn");
 if (_charImportBtn) _charImportBtn.addEventListener("click", () => $("#char-import-input").click());
 const _charImportInput = $("#char-import-input");
 if (_charImportInput) _charImportInput.addEventListener("change", async (e) => {
   const file = e.target.files[0]; if (!file) return;
   try {
-    const text = await file.text();
-    const data = JSON.parse(text);
-    const res = await api("/api/character/import", "POST", data);
+    const res = await uploadShareFile("/api/share/character/import", file);
     toast(window.t("char.import.success", { name: res.name }));
-    loadCharacters();
+    await loadCharacters();
   } catch (err) {
     toast(window.t("char.import.failed", { error: err.message }), true);
   } finally {
@@ -881,6 +888,9 @@ async function loadCharacters() {
         el("div", { class: "acts" },
           el("button", { class: "btn sm", onclick: () => startChat(c.id) }, window.t("char.chat_btn")),
           el("button", { class: "btn sm ghost", onclick: () => editCharacter(c) }, window.t("common.edit")),
+          el("button", { class: "btn sm ghost", onclick: () => {
+            window.location.href = "/api/share/character/export?id=" + encodeURIComponent(c.id);
+          } }, window.t("char.share_btn")),
           el("button", { class: "btn sm danger", onclick: () => delCharacter(c.id) }, "✕"),
         )
       )
@@ -1745,21 +1755,24 @@ function renderScenarioList() {
   const list = $("#scenario-list");
   if (!list) return;
   list.innerHTML = "";
-  if (!scenarios.length) { list.innerHTML = '<div class="hint">No scenario yet. Create one!</div>'; return; }
+  if (!scenarios.length) { list.innerHTML = `<div class="hint">${window.t("scenario.no_scenarios")}</div>`; return; }
   for (const sc of scenarios) {
     const tags = [sc.place, sc.mood_theme, sc.theme, sc.relationship].filter(Boolean);
     list.append(el("div", { class: "scenario-card" },
       el("div", { class: "sc-title" }, sc.title || "(sans titre)"),
       el("div", { class: "sc-tags" }, ...tags.map(t => el("span", { class: "sc-tag" }, t))),
       sc.notes ? el("div", { class: "sc-notes hint" }, sc.notes.slice(0, 100) + (sc.notes.length > 100 ? "…" : "")) : el("span"),
-      el("div", { class: "row", style: "gap:6px; margin-top:8px;" },
-        el("button", { class: "btn sm ghost", onclick: () => editScenario(sc) }, "✏️ Edit"),
+      el("div", { class: "row", style: "gap:6px; margin-top:8px; flex-wrap:wrap;" },
+        el("button", { class: "btn sm ghost", onclick: () => editScenario(sc) }, window.t("scenario.edit_btn")),
+        el("button", { class: "btn sm ghost", onclick: () => {
+          window.location.href = "/api/share/scenario/export?id=" + encodeURIComponent(sc.id);
+        } }, window.t("scenario.export_btn")),
         el("button", { class: "btn sm danger", onclick: async () => {
-          if (!confirm("Delete this scenario?")) return;
+          if (!confirm(window.t("scenario.delete_confirm"))) return;
           await api("/api/scenario/delete", "POST", { id: sc.id }); loadScenarios();
         } }, "✕"),
-        el("button", { class: "btn sm", title: "Apply to active conversation",
-          onclick: () => applyScenarioToChat(sc.id, sc.title) }, "▶ Appliquer"))));
+        el("button", { class: "btn sm", title: window.t("scenario.apply_title"),
+          onclick: () => applyScenarioToChat(sc.id, sc.title) }, window.t("scenario.apply_btn")))));
   }
 }
 
@@ -1800,6 +1813,22 @@ function renderScenarioBadge() {
     badge.style.display = "none";
   }
 }
+
+const _scImportBtn = $("#sc-import-btn");
+if (_scImportBtn) _scImportBtn.addEventListener("click", () => $("#sc-import-input").click());
+const _scImportInput = $("#sc-import-input");
+if (_scImportInput) _scImportInput.addEventListener("change", async (e) => {
+  const file = e.target.files[0]; if (!file) return;
+  try {
+    const res = await uploadShareFile("/api/share/scenario/import", file);
+    toast(window.t("scenario.import_success", { title: res.title || window.t("scenario.new_title") }));
+    await loadScenarios();
+  } catch (err) {
+    toast(window.t("scenario.import_failed", { error: err.message }), true);
+  } finally {
+    e.target.value = "";
+  }
+});
 
 $("#sc-save").addEventListener("click", async () => {
   const data = {};

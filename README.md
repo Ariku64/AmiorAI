@@ -19,7 +19,7 @@
 </p>
 
 <p align="center">
-  Current release: <strong>v40.0.7</strong> · Windows 10/11 · Apache-2.0
+  Current release: <strong>v40.0.8</strong> · Windows 10/11 · Apache-2.0
 </p>
 
 <p align="center">
@@ -49,6 +49,7 @@ The application interface, characters, conversations, memories, images and setti
 |-|-|
 |Local conversations|Connects to an OpenAI-compatible LM Studio server.|
 |Character creation|Personality, scenario, greeting, physical description, avatar and voice sample.|
+|Share packages|Export/import public character packages with profile, avatar and mood faces, plus portable scenarios.|
 |Persistent memory|Keeps character and conversation information between sessions.|
 |Roleplay display|Distinct rendering for dialogue, narration and expressions.|
 |Image generation|Flux 2 Klein reference-image workflows and the unified Krea 2 workflow.|

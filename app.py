@@ -13,6 +13,8 @@ User data is stored locally in the AmiorAI data folder.
 import json
 import os
 import sys
+import io
+import zipfile
 
 # Garantit que ce dossier (qui contient engine.py) est dans sys.path, quel que soit le
 # mode de lancement. Sur une distribution Python "embeddable" (voir install.bat),
@@ -360,7 +362,7 @@ _LAN_LOGIN_HTML = """<!DOCTYPE html>
 
 
 APP_NAME = "AmiorAI"
-APP_VERSION = "v40.0.7"
+APP_VERSION = "v40.0.8"
 
 # --------------------------------------------------------------------------- #
 #  Chemins et constantes — source unique : app_paths.py
@@ -5279,6 +5281,340 @@ def api_generate_background(chat_id, message_id, prompt=None, dry_run=False):
 
 
 # --------------------------------------------------------------------------- #
+#  Paquets partageables (v40.0.8)
+# --------------------------------------------------------------------------- #
+# Les paquets publics n'embarquent volontairement AUCUNE conversation, mémoire
+# personnelle, statistique d'humeur, galerie, voix ou donnée de réglage.
+_SHARE_CHARACTER_FORMAT = "amiorai.character"
+_SHARE_SCENARIO_FORMAT = "amiorai.scenario"
+_SHARE_FORMAT_VERSION = 1
+_SHARE_MAX_ARCHIVE_BYTES = 128 * 1024 * 1024
+_SHARE_MAX_UNCOMPRESSED_BYTES = 192 * 1024 * 1024
+_SHARE_MAX_IMAGE_BYTES = 32 * 1024 * 1024
+_SHARE_MAX_MEMBERS = 64
+_SHARE_IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp"}
+_SHARE_CHARACTER_FIELDS = (
+    "name", "age", "personality", "appearance", "scenario", "greeting",
+    "system_prompt", "image_prompt", "locked_tags", "role", "moral_limits",
+    "krea_token", "krea_force_physical",
+)
+_SHARE_SCENARIO_FIELDS = (
+    "title", "place", "mood_theme", "theme", "relationship",
+    "goal", "conflict", "notes",
+)
+
+
+def _share_slug(value, fallback="package"):
+    slug = re.sub(r"[^a-zA-Z0-9_-]+", "_", str(value or "").strip()).strip("_-")
+    return (slug[:80] or fallback).lower()
+
+
+def _share_text(value, field="field", limit=200000):
+    if value is None:
+        return ""
+    if not isinstance(value, (str, int, float, bool)):
+        raise RuntimeError(f"Invalid value for {field} in share package.")
+    text = str(value)
+    if len(text) > limit:
+        raise RuntimeError(f"Value for {field} is too long in share package.")
+    return text
+
+
+def _share_safe_member(name):
+    """Normalise un chemin ZIP et bloque chemins absolus / traversal."""
+    clean = str(name or "").replace("\\", "/")
+    parts = [p for p in clean.split("/") if p not in ("", ".")]
+    if not parts or clean.startswith("/") or any(p == ".." for p in parts):
+        raise RuntimeError("Invalid path in share package.")
+    if ":" in parts[0]:
+        raise RuntimeError("Invalid absolute path in share package.")
+    return "/".join(parts)
+
+
+def _share_image_ext(member_name, payload=None):
+    ext = os.path.splitext(str(member_name or ""))[1].lower()
+    if ext not in _SHARE_IMAGE_EXTENSIONS:
+        raise RuntimeError("Unsupported image type in share package.")
+    if payload is not None:
+        valid = (
+            (ext == ".png" and payload.startswith(b"\x89PNG\r\n\x1a\n")) or
+            (ext in (".jpg", ".jpeg") and payload.startswith(b"\xff\xd8\xff")) or
+            (ext == ".webp" and len(payload) >= 12 and
+             payload[:4] == b"RIFF" and payload[8:12] == b"WEBP")
+        )
+        if not valid:
+            raise RuntimeError("Invalid or corrupted image in share package.")
+    return ext
+
+
+def _share_open_zip(blob, expected_format):
+    if not isinstance(blob, (bytes, bytearray)) or not blob:
+        raise RuntimeError("Empty share package.")
+    if len(blob) > _SHARE_MAX_ARCHIVE_BYTES:
+        raise RuntimeError("Share package is too large.")
+    stream = io.BytesIO(bytes(blob))
+    if not zipfile.is_zipfile(stream):
+        raise RuntimeError("This file is not a valid AmiorAI share package.")
+    stream.seek(0)
+    zf = zipfile.ZipFile(stream, "r")
+    infos = zf.infolist()
+    if len(infos) > _SHARE_MAX_MEMBERS:
+        zf.close()
+        raise RuntimeError("Share package contains too many files.")
+    total = 0
+    normalized = set()
+    for info in infos:
+        member = _share_safe_member(info.filename)
+        if member in normalized:
+            zf.close()
+            raise RuntimeError("Duplicate file in share package.")
+        normalized.add(member)
+        if info.flag_bits & 0x1:
+            zf.close()
+            raise RuntimeError("Encrypted share packages are not supported.")
+        total += int(info.file_size or 0)
+        if total > _SHARE_MAX_UNCOMPRESSED_BYTES:
+            zf.close()
+            raise RuntimeError("Share package expands beyond the safety limit.")
+    try:
+        raw_manifest = zf.read("manifest.json")
+        if len(raw_manifest) > 2 * 1024 * 1024:
+            raise RuntimeError("Share package manifest is too large.")
+        manifest = json.loads(raw_manifest.decode("utf-8"))
+    except KeyError:
+        zf.close()
+        raise RuntimeError("Share package is missing manifest.json.")
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        zf.close()
+        raise RuntimeError("Invalid share package manifest.") from exc
+    if not isinstance(manifest, dict) or manifest.get("format") != expected_format:
+        zf.close()
+        raise RuntimeError("This share package has the wrong type.")
+    if int(manifest.get("format_version", 0) or 0) != _SHARE_FORMAT_VERSION:
+        zf.close()
+        raise RuntimeError("Unsupported share package version.")
+    return zf, manifest
+
+
+def _share_add_image(zf, stored_name, archive_stem):
+    """Ajoute une image locale au ZIP et retourne son chemin interne, sinon None."""
+    if not stored_name:
+        return None
+    src, _legacy = resolve_img(stored_name)
+    if not os.path.isfile(src):
+        return None
+    size = os.path.getsize(src)
+    if size <= 0 or size > _SHARE_MAX_IMAGE_BYTES:
+        return None
+    ext = os.path.splitext(src)[1].lower()
+    if ext not in _SHARE_IMAGE_EXTENSIONS:
+        return None
+    arcname = _share_safe_member(archive_stem + ext)
+    zf.write(src, arcname, compress_type=zipfile.ZIP_DEFLATED)
+    return arcname
+
+
+def _share_restore_image(zf, member_name, prefix):
+    member = _share_safe_member(member_name)
+    try:
+        info = zf.getinfo(member)
+    except KeyError as exc:
+        raise RuntimeError(f"Missing image asset: {member}") from exc
+    if info.file_size <= 0 or info.file_size > _SHARE_MAX_IMAGE_BYTES:
+        raise RuntimeError("Image asset exceeds the safety limit.")
+    payload = zf.read(info)
+    ext = _share_image_ext(member, payload)
+    filename = f"{_share_slug(prefix, 'shared')}_{uuid.uuid4().hex[:16]}{ext}"
+    target = os.path.join(IMG_DIR, filename)
+    tmp = target + ".tmp"
+    with open(tmp, "wb") as f:
+        f.write(payload)
+    os.replace(tmp, target)
+    return filename
+
+
+def api_export_character_share_package(character_id):
+    with db() as c:
+        row = c.execute("SELECT * FROM characters WHERE id=?", (character_id,)).fetchone()
+        if not row:
+            raise RuntimeError("Character not found.")
+        emotions = c.execute(
+            "SELECT emotion, image FROM char_emotions WHERE character_id=? ORDER BY emotion",
+            (character_id,),
+        ).fetchall()
+    char = dict(row)
+    public_char = {k: char.get(k, "") for k in _SHARE_CHARACTER_FIELDS}
+    # Ne jamais exposer les champs privés/locaux : id, avatar local, voix, timestamps.
+    public_char["krea_force_physical"] = 1 if char.get("krea_force_physical", 1) else 0
+    assets = {"avatar": None, "emotions": {}}
+    out = io.BytesIO()
+    with zipfile.ZipFile(out, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=6) as zf:
+        assets["avatar"] = _share_add_image(zf, char.get("avatar"), "assets/avatar")
+        for item in emotions:
+            emotion = str(item["emotion"] or "").strip().lower()
+            if emotion not in EMOTIONS:
+                continue
+            member = _share_add_image(zf, item["image"], f"assets/emotions/{emotion}")
+            if member:
+                assets["emotions"][emotion] = member
+        manifest = {
+            "format": _SHARE_CHARACTER_FORMAT,
+            "format_version": _SHARE_FORMAT_VERSION,
+            "app_version": APP_VERSION,
+            "exported_at": time.time(),
+            "privacy": {
+                "contains_conversations": False,
+                "contains_personal_memory": False,
+                "contains_gallery": False,
+                "contains_voice": False,
+                "contains_settings": False,
+            },
+            "character": public_char,
+            "assets": assets,
+            "image_generation": {
+                "avatar_prompt": char.get("image_prompt") or "",
+                "supported_mood_faces": list(EMOTIONS.keys()),
+            },
+        }
+        zf.writestr(
+            "manifest.json",
+            json.dumps(manifest, ensure_ascii=False, indent=2).encode("utf-8"),
+        )
+    filename = f"{_share_slug(char.get('name'), 'character')}.amiorchar"
+    return out.getvalue(), filename
+
+
+def api_import_character_share_package(blob):
+    zf, manifest = _share_open_zip(blob, _SHARE_CHARACTER_FORMAT)
+    copied = []
+    saved = None
+    try:
+        raw_char = manifest.get("character") or {}
+        if not isinstance(raw_char, dict):
+            raise RuntimeError("Invalid character data in share package.")
+        data = {
+            k: _share_text(raw_char.get(k, ""), k)
+            for k in _SHARE_CHARACTER_FIELDS if k != "krea_force_physical"
+        }
+        raw_force = raw_char.get("krea_force_physical", 1)
+        data["krea_force_physical"] = 0 if raw_force in (0, "0", False, "false", "off") else 1
+        data["name"] = (data.get("name") or "Imported character")[:200]
+        assets = manifest.get("assets") or {}
+        if not isinstance(assets, dict):
+            assets = {}
+        avatar_member = assets.get("avatar")
+        if avatar_member:
+            data["avatar"] = _share_restore_image(zf, avatar_member, "shared_avatar")
+            copied.append(data["avatar"])
+        else:
+            data["avatar"] = ""
+        saved = api_character_save(data)
+        cid = saved["id"]
+        restored_emotions = 0
+        emotions = assets.get("emotions") or {}
+        if isinstance(emotions, dict):
+            with db() as c:
+                for emotion, member in emotions.items():
+                    emotion = str(emotion or "").strip().lower()
+                    if emotion not in EMOTIONS or not member:
+                        continue
+                    image = _share_restore_image(zf, member, f"shared_{emotion}")
+                    copied.append(image)
+                    c.execute(
+                        "INSERT OR REPLACE INTO char_emotions(character_id, emotion, image, created_at) "
+                        "VALUES (?,?,?,?)",
+                        (cid, emotion, image, time.time()),
+                    )
+                    restored_emotions += 1
+        saved = api_character_get(cid)
+        saved["imported_avatar"] = bool(saved.get("avatar"))
+        saved["imported_mood_faces"] = restored_emotions
+        saved["share_format"] = _SHARE_FORMAT_VERSION
+        return saved
+    except Exception:
+        if saved and saved.get("id"):
+            try:
+                api_character_delete(saved["id"])
+            except Exception:
+                pass
+        for filename in copied:
+            try:
+                os.remove(os.path.join(IMG_DIR, os.path.basename(filename)))
+            except OSError:
+                pass
+        raise
+    finally:
+        zf.close()
+
+
+def api_export_scenario_share_package(scenario_id):
+    with db() as c:
+        row = c.execute("SELECT * FROM scenarios WHERE id=?", (scenario_id,)).fetchone()
+    if not row:
+        raise RuntimeError("Scenario not found.")
+    scenario = dict(row)
+    public_scenario = {k: scenario.get(k, "") for k in _SHARE_SCENARIO_FIELDS}
+    manifest = {
+        "format": _SHARE_SCENARIO_FORMAT,
+        "format_version": _SHARE_FORMAT_VERSION,
+        "app_version": APP_VERSION,
+        "exported_at": time.time(),
+        "scenario": public_scenario,
+    }
+    out = io.BytesIO()
+    with zipfile.ZipFile(out, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=6) as zf:
+        zf.writestr(
+            "manifest.json",
+            json.dumps(manifest, ensure_ascii=False, indent=2).encode("utf-8"),
+        )
+    filename = f"{_share_slug(scenario.get('title'), 'scenario')}.amiorscenario"
+    return out.getvalue(), filename
+
+
+def api_import_scenario_share_package(blob):
+    zf, manifest = _share_open_zip(blob, _SHARE_SCENARIO_FORMAT)
+    try:
+        raw = manifest.get("scenario") or {}
+        if not isinstance(raw, dict):
+            raise RuntimeError("Invalid scenario data in share package.")
+        data = {k: _share_text(raw.get(k, ""), k) for k in _SHARE_SCENARIO_FIELDS}
+        if not str(data.get("title") or "").strip() and not str(data.get("place") or "").strip():
+            raise RuntimeError("The shared scenario is empty.")
+        return api_scenario_save(data)
+    finally:
+        zf.close()
+
+
+def api_import_character_share_file(blob):
+    """Importe le nouveau paquet .amiorchar ou un ancien export JSON."""
+    stream = io.BytesIO(blob)
+    if zipfile.is_zipfile(stream):
+        return api_import_character_share_package(blob)
+    try:
+        data = json.loads(bytes(blob).decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise RuntimeError("Unsupported character file. Use .amiorchar or a legacy JSON export.") from exc
+    return api_import_character(data)
+
+
+def api_import_scenario_share_file(blob):
+    """Importe le paquet .amiorscenario ou un scénario JSON simple."""
+    stream = io.BytesIO(blob)
+    if zipfile.is_zipfile(stream):
+        return api_import_scenario_share_package(blob)
+    try:
+        data = json.loads(bytes(blob).decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise RuntimeError("Unsupported scenario file. Use .amiorscenario or JSON.") from exc
+    if isinstance(data, dict) and isinstance(data.get("scenario"), dict):
+        data = data["scenario"]
+    if not isinstance(data, dict):
+        raise RuntimeError("Invalid scenario JSON.")
+    data = {k: _share_text(data.get(k, ""), k) for k in _SHARE_SCENARIO_FIELDS}
+    return api_scenario_save(data)
+
+
+# --------------------------------------------------------------------------- #
 #  Sauvegarde / export JSON
 # --------------------------------------------------------------------------- #
 def api_export_character(character_id, with_history=True):
@@ -6033,6 +6369,18 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(data)
 
+    def _send_bytes(self, data, content_type, filename=None):
+        payload = bytes(data)
+        self.send_response(200)
+        self.send_header("Content-Type", content_type)
+        if filename:
+            safe = re.sub(r"[^a-zA-Z0-9._-]+", "_", os.path.basename(filename)) or "download.bin"
+            self.send_header("Content-Disposition", f'attachment; filename="{safe}"')
+        self.send_header("Content-Length", str(len(payload)))
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        self.wfile.write(payload)
+
     # ---- GET ----
     def do_GET(self):
         # Vérification accès LAN si activé
@@ -6269,6 +6617,12 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(api_civitai_metadata_list())
             if path == "/api/civitai/sync_status":
                 return self._json(api_civitai_sync_status())
+            if path == "/api/share/character/export":
+                payload, filename = api_export_character_share_package(qs.get("id", [""])[0])
+                return self._send_bytes(payload, "application/vnd.amiorai.character+zip", filename)
+            if path == "/api/share/scenario/export":
+                payload, filename = api_export_scenario_share_package(qs.get("id", [""])[0])
+                return self._send_bytes(payload, "application/vnd.amiorai.scenario+zip", filename)
             if path == "/api/character/export":
                 data = api_export_character(qs.get("id", [""])[0])
                 body = json.dumps(data, ensure_ascii=False, indent=2).encode("utf-8")
@@ -6423,6 +6777,16 @@ class Handler(BaseHTTPRequestHandler):
                         os.unlink(tmp_path)
                     except OSError:
                         pass
+
+            if path in ("/api/share/character/import", "/api/share/scenario/import"):
+                if not body.get("_multipart"):
+                    return self._error("Expected multipart/form-data request.")
+                package_bytes = self._extract_multipart_file(body, "file")
+                if not package_bytes:
+                    return self._error("Missing 'file' field in request.")
+                if path.endswith("/character/import"):
+                    return self._json(api_import_character_share_file(package_bytes))
+                return self._json(api_import_scenario_share_file(package_bytes))
 
             if path == "/api/settings":
                 if not _lan_is_local(client_ip):

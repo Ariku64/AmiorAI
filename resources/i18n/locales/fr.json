@@ -3,8 +3,8 @@
     "lang": "fr",
     "name": "Français",
     "fallback": "en",
-    "version": "40.0.7",
-    "generated": "2026-07-12T10:28:19.046666"
+    "version": "40.0.8",
+    "generated": "2026-07-12T13:15:58.174592"
   },
   "nav": {
     "characters": "Personnages",
@@ -26,7 +26,7 @@
   "char": {
     "title": "Personnages",
     "sub": "Crée un personnage assisté par ton LLM, puis génère son portrait avec ComfyUI.",
-    "import_btn": "📥 Importer un personnage (JSON)",
+    "import_btn": "📥 Importer un personnage partagé",
     "creation_title": "Création assistée",
     "brief_label": "Décris l'idée en quelques mots",
     "brief_placeholder": "Décris brièvement le personnage, son rôle et son ton…",
@@ -133,7 +133,7 @@
       "long": "long",
       "save_first_hint": "Enregistre d'abord le personnage pour ajouter des souvenirs."
     },
-    "export_btn": "Exporter ce personnage (JSON + historique)",
+    "export_btn": "Exporter le paquet partageable (fiche + avatar + visages d’humeur)",
     "my_chars": "Mes personnages",
     "no_chars": "Aucun personnage pour l'instant.",
     "toasts": {
@@ -324,7 +324,9 @@
       "languages": "Langues",
       "styles": "Styles d’écriture",
       "title": "Assistants de style"
-    }
+    },
+    "share_hint": "Paquet public : les conversations, mémoires personnelles, voix et réglages ne sont jamais inclus.",
+    "share_btn": "📤 Partager"
   },
   "chat": {
     "title": "Conversations",
@@ -490,7 +492,16 @@
       "mentor_student": "Mentor / élève",
       "siblings": "Fratrie",
       "boss_employee": "Patron / employé"
-    }
+    },
+    "import_btn": "📥 Importer un scénario partagé",
+    "share_hint": "Les paquets de scénario partagés contiennent uniquement les données narratives.",
+    "export_btn": "📤 Partager",
+    "edit_btn": "✏️ Modifier",
+    "delete_confirm": "Supprimer ce scénario ?",
+    "apply_title": "Appliquer à la conversation active",
+    "apply_btn": "▶ Appliquer",
+    "import_success": "Scénario « {title} » importé !",
+    "import_failed": "Échec de l’import du scénario : {error}"
   },
   "journal": {
     "title": "Journal · Timeline",
@@ -1153,6 +1164,6 @@
     "global_engine_label": "Moteur d’image global"
   },
   "meta": {
-    "version": "40.0.4"
+    "version": "40.0.8"
   }
 }

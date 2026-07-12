@@ -3,8 +3,8 @@
     "lang": "en",
     "name": "English",
     "fallback": null,
-    "version": "40.0.7",
-    "generated": "2026-07-12T10:28:19.046666"
+    "version": "40.0.8",
+    "generated": "2026-07-12T13:15:58.174592"
   },
   "nav": {
     "characters": "Characters",
@@ -26,7 +26,7 @@
   "char": {
     "title": "Characters",
     "sub": "Create a character assisted by your LLM, then generate their portrait with ComfyUI.",
-    "import_btn": "📥 Import a character (JSON)",
+    "import_btn": "📥 Import shared character",
     "creation_title": "Assisted Creation",
     "brief_label": "Describe the idea in a few words",
     "brief_placeholder": "Briefly describe the character, their role and tone…",
@@ -133,7 +133,7 @@
       "long": "long",
       "save_first_hint": "Save the character first to add memories."
     },
-    "export_btn": "Export this character (JSON + history)",
+    "export_btn": "Export share package (profile + avatar + mood faces)",
     "my_chars": "My characters",
     "no_chars": "No characters yet.",
     "toasts": {
@@ -324,7 +324,9 @@
       "languages": "Languages",
       "styles": "Writing styles",
       "title": "Writing helpers"
-    }
+    },
+    "share_hint": "Public package: conversations, personal memories, voice and settings are never included.",
+    "share_btn": "📤 Share"
   },
   "chat": {
     "title": "Chats",
@@ -490,7 +492,16 @@
       "mentor_student": "Mentor / student",
       "siblings": "Siblings",
       "boss_employee": "Boss / employee"
-    }
+    },
+    "import_btn": "📥 Import shared scenario",
+    "share_hint": "Shared scenario packages contain narrative data only.",
+    "export_btn": "📤 Share",
+    "edit_btn": "✏️ Edit",
+    "delete_confirm": "Delete this scenario?",
+    "apply_title": "Apply to active conversation",
+    "apply_btn": "▶ Apply",
+    "import_success": "Scenario “{title}” imported!",
+    "import_failed": "Scenario import failed: {error}"
   },
   "journal": {
     "title": "Journal · Timeline",
@@ -1153,6 +1164,6 @@
     "global_engine_label": "Global image engine"
   },
   "meta": {
-    "version": "40.0.4"
+    "version": "40.0.8"
   }
 }

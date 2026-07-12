@@ -6,8 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>AmiorAI</title>
   <link rel="icon" type="image/png" href="/logo-icon-square.png">
-  <link rel="stylesheet" href="/style.css?v=40.0.7">
-  <link rel="stylesheet" href="/icons.css?v=40.0.7">
+  <link rel="stylesheet" href="/style.css?v=40.0.8">
+  <link rel="stylesheet" href="/icons.css?v=40.0.8">
   <script>
     // Applique le theme AVANT le premier rendu (evite un flash de mauvais theme).
     // "system" = pas d'attribut data-theme : le CSS suit alors prefers-color-scheme
@@ -96,8 +96,8 @@
     <section id="view-characters" class="view active">
       <h1 data-i18n="char.title">Characters</h1>
       <p class="sub"><span data-i18n="char.sub">Create a character with your LLM, then generate their portrait with ComfyUI.</span>
-        <button class="btn sm ghost" id="char-import-btn" style="margin-left:8px;" data-i18n="char.import_btn">📥 Import character (JSON)</button>
-        <input type="file" id="char-import-input" accept="application/json" style="display:none;">
+        <button class="btn sm ghost" id="char-import-btn" style="margin-left:8px;" data-i18n="char.import_btn">📥 Import shared character</button>
+        <input type="file" id="char-import-input" accept=".amiorchar,.json,application/zip,application/json" style="display:none;">
       </p>
 
       <div class="panel">
@@ -270,7 +270,8 @@
           </div>
 
           <div id="cg-export" style="display:none; margin-top:16px;">
-            <button class="btn sm ghost" id="cg-export-btn" data-i18n="char.export_btn">Export this character (JSON + history)</button>
+            <button class="btn sm ghost" id="cg-export-btn" data-i18n="char.export_btn">Export share package (profile + avatar + mood faces)</button>
+            <p class="hint" style="margin:6px 0 0;" data-i18n="char.share_hint">Public package: conversations, personal memories, voice and settings are never included.</p>
           </div>
         </div>
       </div>
@@ -297,6 +298,11 @@
     <section id="view-scenarios" class="view">
       <h1 data-i18n="scenario.title">Créateur de scénarios</h1>
       <p class="sub" data-i18n="scenario.sub">Crée des contextes narratifs que tu peux activer dans n'importe quelle conversation.</p>
+      <div class="row" style="margin-bottom:12px; gap:8px;">
+        <button class="btn sm ghost" id="sc-import-btn" data-i18n="scenario.import_btn">📥 Import shared scenario</button>
+        <input type="file" id="sc-import-input" accept=".amiorscenario,.json,application/zip,application/json" style="display:none;">
+        <span class="hint" data-i18n="scenario.share_hint">Shared scenario packages contain narrative data only.</span>
+      </div>
 
       <div class="panel">
         <h2 data-i18n="scenario.new_title">New scenario</h2>
@@ -1280,7 +1286,7 @@
   </main>
 
   <div id="modal-root"></div>
-  <script src="/icons.js?v=40.0.7"></script>
-  <script src="/app.js?v=40.0.7"></script>
+  <script src="/icons.js?v=40.0.8"></script>
+  <script src="/app.js?v=40.0.8"></script>
 </body>
 </html>

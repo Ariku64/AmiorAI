@@ -3,8 +3,8 @@
     "lang": "de",
     "name": "Deutsch",
     "fallback": "en",
-    "version": "40.0.7",
-    "generated": "2026-07-12T10:28:19.046666"
+    "version": "40.0.8",
+    "generated": "2026-07-12T13:15:58.174592"
   },
   "nav": {
     "characters": "Charaktere",
@@ -26,7 +26,7 @@
   "char": {
     "title": "Charaktere",
     "sub": "Erstelle einen Charakter mit Hilfe deines LLM, dann generiere sein Portrait mit ComfyUI.",
-    "import_btn": "📥 Charakter importieren (JSON)",
+    "import_btn": "📥 Geteilten Charakter importieren",
     "creation_title": "Assistierte Erstellung",
     "brief_label": "Beschreibe die Idee in wenigen Worten",
     "brief_placeholder": "Beschreibe kurz den Charakter, seine Rolle und seinen Ton…",
@@ -133,7 +133,7 @@
       "long": "lang",
       "save_first_hint": "Speichere zuerst den Charakter, um Erinnerungen hinzuzufügen."
     },
-    "export_btn": "Export this character (JSON + history)",
+    "export_btn": "Teilbares Paket exportieren (Profil + Avatar + Stimmungsbilder)",
     "my_chars": "Meine Charaktere",
     "no_chars": "Noch keine Charaktere.",
     "toasts": {
@@ -324,7 +324,9 @@
       "languages": "Sprachen",
       "styles": "Schreibstile",
       "title": "Schreibhilfen"
-    }
+    },
+    "share_hint": "Öffentliches Paket: Unterhaltungen, persönliche Erinnerungen, Stimme und Einstellungen werden niemals eingeschlossen.",
+    "share_btn": "📤 Teilen"
   },
   "chat": {
     "title": "Gespräche",
@@ -490,7 +492,16 @@
       "mentor_student": "Mentor / Schüler",
       "siblings": "Geschwister",
       "boss_employee": "Chef / Mitarbeiter"
-    }
+    },
+    "import_btn": "📥 Geteiltes Szenario importieren",
+    "share_hint": "Geteilte Szenariopakete enthalten ausschließlich narrative Daten.",
+    "export_btn": "📤 Teilen",
+    "edit_btn": "✏️ Bearbeiten",
+    "delete_confirm": "Dieses Szenario löschen?",
+    "apply_title": "Auf die aktive Unterhaltung anwenden",
+    "apply_btn": "▶ Anwenden",
+    "import_success": "Szenario „{title}“ importiert!",
+    "import_failed": "Szenarioimport fehlgeschlagen: {error}"
   },
   "journal": {
     "title": "Journal · Timeline",
@@ -1153,6 +1164,6 @@
     "global_engine_label": "Globales Bildmodell"
   },
   "meta": {
-    "version": "40.0.4"
+    "version": "40.0.8"
   }
 }

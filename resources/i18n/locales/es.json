@@ -3,8 +3,8 @@
     "lang": "es",
     "name": "Español",
     "fallback": "en",
-    "version": "40.0.7",
-    "generated": "2026-07-12T10:28:19.046666"
+    "version": "40.0.8",
+    "generated": "2026-07-12T13:15:58.174592"
   },
   "nav": {
     "characters": "Personajes",
@@ -26,7 +26,7 @@
   "char": {
     "title": "Personajes",
     "sub": "Crea un personaje asistido por tu LLM, luego genera su retrato con ComfyUI.",
-    "import_btn": "📥 Importar un personaje (JSON)",
+    "import_btn": "📥 Importar personaje compartido",
     "creation_title": "Creación asistida",
     "brief_label": "Describe la idea en pocas palabras",
     "brief_placeholder": "Describe brevemente el personaje, su rol y su tono…",
@@ -133,7 +133,7 @@
       "long": "largo",
       "save_first_hint": "Guarda primero el personaje para añadir recuerdos."
     },
-    "export_btn": "Export this character (JSON + history)",
+    "export_btn": "Exportar paquete compartible (ficha + avatar + rostros de ánimo)",
     "my_chars": "Mis personajes",
     "no_chars": "Ningún personaje por ahora.",
     "toasts": {
@@ -324,7 +324,9 @@
       "languages": "Idiomas",
       "styles": "Estilos de escritura",
       "title": "Ayudas de escritura"
-    }
+    },
+    "share_hint": "Paquete público: nunca se incluyen conversaciones, recuerdos personales, voz ni ajustes.",
+    "share_btn": "📤 Compartir"
   },
   "chat": {
     "title": "Conversaciones",
@@ -490,7 +492,16 @@
       "mentor_student": "Mentor / alumno",
       "siblings": "Hermanos",
       "boss_employee": "Jefe / empleado"
-    }
+    },
+    "import_btn": "📥 Importar escenario compartido",
+    "share_hint": "Los paquetes de escenario compartidos solo contienen datos narrativos.",
+    "export_btn": "📤 Compartir",
+    "edit_btn": "✏️ Editar",
+    "delete_confirm": "¿Eliminar este escenario?",
+    "apply_title": "Aplicar a la conversación activa",
+    "apply_btn": "▶ Aplicar",
+    "import_success": "¡Escenario «{title}» importado!",
+    "import_failed": "Error al importar el escenario: {error}"
   },
   "journal": {
     "title": "Journal · Timeline",
@@ -1153,6 +1164,6 @@
     "global_engine_label": "Motor de imagen global"
   },
   "meta": {
-    "version": "40.0.4"
+    "version": "40.0.8"
   }
 }
