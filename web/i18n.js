@@ -6,7 +6,7 @@
  * Version 39.0.3
  *
  * API publique :
- *   t("key.nested", { name: "Mia" })  → chaîne traduite
+ *   t("key.nested", { name: "Example character" })  → chaîne traduite
  *   I18n.setLanguage("en")             → charge + applique la langue
  *   I18n.getActiveLang()               → "fr" / "en" / ...
  *   I18n.applyToDOM()                  → réapplique toutes les traductions statiques

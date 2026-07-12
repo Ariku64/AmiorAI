@@ -122,7 +122,7 @@ body{background:var(--bg);color:var(--text);font-family:system-ui,sans-serif;
 ::-webkit-scrollbar-thumb{background:var(--line);border-radius:2px;}
 </style>
 <script src="/i18n.js"></script>
-  <link rel="stylesheet" href="/icons.css?v=40.0.5">
+  <link rel="stylesheet" href="/icons.css?v=40.0.6">
 </head>
 <body>
 <svg style="display:none;position:absolute;width:0;height:0" aria-hidden="true"><defs>
@@ -175,7 +175,7 @@ body{background:var(--bg);color:var(--text);font-family:system-ui,sans-serif;
     <div style="background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px;">
       <div class="m-field">
         <label class="m-label" data-i18n="studio.prompt_label">Prompt</label>
-        <textarea class="m-input m-textarea" id="studio-prompt" rows="4" placeholder="Décris la scène…" data-i18n-placeholder="studio.prompt_placeholder"></textarea>
+        <textarea class="m-input m-textarea" id="studio-prompt" rows="4" placeholder="Décris la scène de façon générale…" data-i18n-placeholder="studio.prompt_placeholder"></textarea>
       </div>
       <div class="btn-row">
         <button class="btn btn-primary" id="btn-generate" style="flex:1;" data-i18n="studio.generate">▶ Générer</button>
@@ -207,7 +207,7 @@ body{background:var(--bg);color:var(--text);font-family:system-ui,sans-serif;
   </div>
   <div class="chat-msgs" id="chat-msgs"></div>
   <div class="chat-bar">
-    <textarea id="chat-input" rows="1" placeholder="Message…"></textarea>
+    <textarea id="chat-input" rows="1" placeholder="Écris un message…" data-i18n-placeholder="chat.input_placeholder"></textarea>
     <button class="send-btn" id="btn-send">↑</button>
   </div>
 </div>
@@ -240,7 +240,7 @@ body{background:var(--bg);color:var(--text);font-family:system-ui,sans-serif;
 
 <div class="toast-el" id="toast"></div>
 
-<script src="/icons.js?v=40.0.5"></script>
+<script src="/icons.js?v=40.0.6"></script>
 <script>
 'use strict';
 const $ = id => document.getElementById(id);

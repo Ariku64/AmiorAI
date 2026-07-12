@@ -1,6 +1,6 @@
 # AmiorAI i18n — Internationalisation
 
-Version 40.0.5 — Système de traduction complet (FR/EN/ES/DE)
+Version 40.0.6 — Système de traduction complet (FR/EN/ES/DE)
 
 ---
 
@@ -32,7 +32,7 @@ resources/i18n/
 t("nav.characters")                        // → "Personnages" (FR)
 
 // Avec variables
-t("char.toasts.created", { name: "Mia" }) // → "Personnage « Mia » créé."
+t("char.toasts.created", { name: "Example character" }) // → "Personnage « Example character » créé."
 
 // Changer la langue (persist = sauvegarder en backend)
 await I18n.setLanguage("en")              // → charge en.json + applique au DOM

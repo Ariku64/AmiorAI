@@ -5,7 +5,7 @@ setlocal EnableExtensions EnableDelayedExpansion
 cd /d "%~dp0"
 
 REM ============================================================
-REM  AmiorAI v40.0.5 - optional Qwen3-TTS 0.6B
+REM  AmiorAI v40.0.6 - optional Qwen3-TTS 0.6B
 REM  Fully isolated official Python embeddable runtime.
 REM  No system Python and no virtual environment are required.
 REM ============================================================
@@ -22,7 +22,7 @@ set "PYTHONUTF8=1"
 
  echo.
 echo ============================================================
-echo  AmiorAI v40.0.5 - optional Qwen3-TTS 0.6B
+echo  AmiorAI v40.0.6 - optional Qwen3-TTS 0.6B
 echo  Autonomous runtime: %EMBED_DIR%
 echo  Chatterbox is not modified.
 echo ============================================================

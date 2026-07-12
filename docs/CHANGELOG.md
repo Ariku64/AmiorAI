@@ -1,5 +1,15 @@
 # AmiorAI — Journal des modifications
 
+## v40.0.6 — 12 juillet 2026
+
+### Exemples de saisie génériques
+
+- Remplacement des placeholders personnalisés ou trop spécifiques par des exemples neutres et réutilisables.
+- Harmonisation des champs sur les interfaces bureau et mobile.
+- Révision complète des formulations françaises, anglaises, espagnoles et allemandes.
+- Mise à jour du fichier maître `translations_master.xlsx` afin que les anciens exemples ne réapparaissent pas lors d’une régénération.
+- Conservation des exemples techniques utiles : URL locales, chemins de modèles et valeurs numériques.
+
 ## v40.0.5 — 12 juillet 2026
 
 ### Documentation GitHub

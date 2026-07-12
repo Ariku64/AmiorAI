@@ -361,7 +361,7 @@ _LAN_LOGIN_HTML = """<!DOCTYPE html>
 
 
 APP_NAME = "AmiorAI"
-APP_VERSION = "v40.0.5"
+APP_VERSION = "v40.0.6"
 
 # --------------------------------------------------------------------------- #
 #  Chemins et constantes — source unique : app_paths.py

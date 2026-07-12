@@ -10,13 +10,12 @@ Krea 2 exige un style de prompt DIFFÉRENT de Flux :
     en flux naturel séparé par des virgules, avec le jeton d'identité (trigger LoRA) en tête.
 
 Exemple de sortie cible :
-  ylisak, young woman, dark skin, green eyes with a brown center, full lips, blonde curly
-  hair styled into two thick front braids, slim curvy build, wide shot angle, waiting in
-  front of a supermarket, wearing a green coat, rainy weather, wet clothes and wet hair,
-  overcast sky, soft natural lighting, cinematic urban realism.
+  character_token, adult character, short hair, blue eyes, average build, wide shot angle,
+  standing near a building entrance, wearing casual clothes, cloudy weather, soft natural
+  lighting, cinematic realism.
 
 Structure d'assemblage (ordre fixe, champs vides ignorés) :
-  1. Jeton d'identité (trigger du LoRA personnage, ex "ylisak")
+  1. Jeton d'identité (trigger du LoRA personnage, ex "character_token")
   2. Description physique complète (locked_tags + image_prompt du configurateur),
      injectée seulement si "force physical" est actif pour le personnage
   3. Cadrage / angle
@@ -202,7 +201,7 @@ def build_krea_prompt(fields, identity_token="", physical_description="",
                       force_physical=True):
     """Assemble le prompt Krea 2 final — flux descriptif littéral, virgules, ordre fixe.
 
-    identity_token       : trigger du LoRA personnage (ex "ylisak"). Vide = omis.
+    identity_token       : trigger du LoRA personnage (ex "character_token"). Vide = omis.
     physical_description : base physique persistante du configurateur
                            (locked_tags + image_prompt, toujours en anglais).
     force_physical       : True → la description physique est TOUJOURS injectée en tête

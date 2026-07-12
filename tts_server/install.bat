@@ -5,7 +5,7 @@ setlocal EnableExtensions EnableDelayedExpansion
 cd /d "%~dp0"
 
 REM ============================================================
-REM  AmiorAI v40.0.5 - Chatterbox Multilingual V3
+REM  AmiorAI v40.0.6 - Chatterbox Multilingual V3
 REM  Self-healing official Python embeddable runtime.
 REM  No system Python and no virtual environment are required.
 REM ============================================================
@@ -28,7 +28,7 @@ if exist "%EMBED_DIR%\.installed" del "%EMBED_DIR%\.installed" >nul 2>&1
 
 echo.
 echo ============================================================
-echo  AmiorAI v40.0.5 - Chatterbox Multilingual V3
+echo  AmiorAI v40.0.6 - Chatterbox Multilingual V3
 echo  Autonomous runtime: %EMBED_DIR%
 echo ============================================================
 echo.

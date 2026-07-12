@@ -5699,7 +5699,7 @@ function openWishlistAddModal() {
   });
   const notesInput = el("textarea", {
     class: "input-inline", rows: "2",
-    placeholder: "Notes personnelles (optional)",
+    placeholder: "Optional notes…",
     style: "width:100%; margin-top:8px; resize:vertical;"
   });
   const statusEl = el("div", { class: "hint", style: "min-height:18px; margin-top:6px;" });

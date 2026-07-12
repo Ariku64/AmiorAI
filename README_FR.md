@@ -12,7 +12,7 @@
   <strong>Français</strong> · <a href="README.md">English</a>
 </p>
 <p align="center">
-  <a href="https://discord.gg/aUjZNSbUBp">
+  <a href="https://discord.gg/wYqhQBJV5z">
     <img src="https://img.shields.io/badge/Join%20the%20Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Join the AmiorAI Discord">
   </a>
 </p>

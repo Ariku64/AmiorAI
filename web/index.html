@@ -6,8 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>AmiorAI</title>
   <link rel="icon" type="image/png" href="/logo-icon-square.png">
-  <link rel="stylesheet" href="/style.css?v=40.0.5">
-  <link rel="stylesheet" href="/icons.css?v=40.0.5">
+  <link rel="stylesheet" href="/style.css?v=40.0.6">
+  <link rel="stylesheet" href="/icons.css?v=40.0.6">
   <script>
     // Applique le theme AVANT le premier rendu (evite un flash de mauvais theme).
     // "system" = pas d'attribut data-theme : le CSS suit alors prefers-color-scheme
@@ -103,11 +103,11 @@
       <div class="panel">
         <h2 data-i18n="char.creation_title">Assisted creation</h2>
         <label data-i18n="char.brief_label">Describe the idea in a few words</label>
-        <textarea id="cg-brief" placeholder="e.g. a shy astronaut who loves plants, soft and curious tone" data-i18n-placeholder="char.brief_placeholder"></textarea>
+        <textarea id="cg-brief" placeholder="Briefly describe the character, their role and tone…" data-i18n-placeholder="char.brief_placeholder"></textarea>
 
         <div class="row" style="gap:12px; margin-top:8px; align-items:flex-end;">
           <div style="flex:1; min-width:160px;"><label data-i18n="char.name_label">Nom (optionnel — sinon inventé)</label>
-            <input id="cg-name" placeholder="ex : Mia" data-i18n-placeholder="char.name_placeholder">
+            <input id="cg-name" placeholder="Nom du personnage" data-i18n-placeholder="char.name_placeholder">
           </div>
           <div style="flex:1; min-width:200px;"><label>Age: <span id="cg-age-val">25</span> years old</label>
             <input type="range" id="cg-age" min="18" max="80" value="25" style="width:100%;">
@@ -133,13 +133,13 @@
             </div>
             <div style="flex:1; min-width:140px;">
               <label data-i18n="char.form.role_label">Rôle relationnel</label>
-              <input id="f-role" placeholder="ex : amant, mentor, rival, ami…" data-i18n-placeholder="char.form.role_placeholder">
+              <input id="f-role" placeholder="ex : ami, guide, collègue…" data-i18n-placeholder="char.form.role_placeholder">
             </div>
           </div>
           <label data-i18n="char.form.personality_label">Personnalité</label><textarea id="f-personality"></textarea>
           <label data-i18n="char.form.moral_limits_label">Limites morales (réactions, sujets évités — une par ligne)</label>
           <textarea id="f-moral_limits" rows="3"
-            placeholder="ex : Je ne supporte pas qu'on crache en public.&#10;La politique m'ennuie profondément."></textarea>
+            placeholder="Décris les sujets, comportements ou limites à éviter…" data-i18n-placeholder="char.form.moral_limits_placeholder"></textarea>
           <label data-i18n="char.form.appearance_label">Apparence</label><textarea id="f-appearance"></textarea>
           <label data-i18n="char.form.scenario_label">Contexte / scénario</label><textarea id="f-scenario"></textarea>
           <label data-i18n="char.form.greeting_label">Premier message (accueil)</label><textarea id="f-greeting"></textarea>
@@ -161,9 +161,9 @@
           </div>
           <label data-i18n="char.form.image_prompt_label">Image prompt</label><textarea id="f-image_prompt"></textarea>
           <label data-i18n="char.form.locked_tags_label">Locked physical traits</label>
-          <input id="f-locked_tags" placeholder="e.g. a woman, curvy figure, long hair" data-i18n-placeholder="char.form.locked_tags_placeholder">
+          <input id="f-locked_tags" placeholder="e.g. adult character, short hair, blue eyes" data-i18n-placeholder="char.form.locked_tags_placeholder">
           <label data-i18n="char.form.krea_token_label">Krea 2 identity token (character LoRA trigger word)</label>
-          <input id="f-krea_token" placeholder="e.g. ylisak" data-i18n-placeholder="char.form.krea_token_placeholder">
+          <input id="f-krea_token" placeholder="e.g. character_token" data-i18n-placeholder="char.form.krea_token_placeholder">
           <label class="row" style="gap:8px; align-items:center; margin-top:8px;">
             <input type="checkbox" id="f-krea_force_physical" checked style="width:auto;">
             <span data-i18n="char.form.krea_force_physical_label">Force the physical base description in Krea 2 prompts</span>
@@ -241,18 +241,18 @@
             <div id="cg-memory-structured" style="margin-bottom:14px; display:none;">
               <h3 style="font-size:14px; margin-bottom:8px;" data-i18n="char.memory.long_title">Mémoire longue (faits stables)</h3>
               <div class="row" style="gap:12px; flex-wrap:wrap;">
-                <div style="flex:1; min-width:180px;"><label data-i18n="char.memory.likes_label">Aime</label><textarea id="cm-likes" rows="2" placeholder="une par ligne" data-i18n-placeholder="char.memory.likes_placeholder"></textarea></div>
-                <div style="flex:1; min-width:180px;"><label data-i18n="char.memory.dislikes_label">N'aime pas</label><textarea id="cm-dislikes" rows="2" placeholder="une par ligne" data-i18n-placeholder="char.memory.likes_placeholder"></textarea></div>
-                <div style="flex:1; min-width:180px;"><label data-i18n="char.memory.events_label">Événements importants</label><textarea id="cm-events" rows="2" placeholder="un par ligne" data-i18n-placeholder="char.memory.events_placeholder"></textarea></div>
-                <div style="flex:1; min-width:180px;"><label data-i18n="char.memory.prefs_label">Préférences de l'utilisateur apprises</label><textarea id="cm-prefs" rows="2" placeholder="une par ligne" data-i18n-placeholder="char.memory.likes_placeholder"></textarea></div>
+                <div style="flex:1; min-width:180px;"><label data-i18n="char.memory.likes_label">Aime</label><textarea id="cm-likes" rows="2" placeholder="un élément par ligne" data-i18n-placeholder="char.memory.likes_placeholder"></textarea></div>
+                <div style="flex:1; min-width:180px;"><label data-i18n="char.memory.dislikes_label">N'aime pas</label><textarea id="cm-dislikes" rows="2" placeholder="un élément par ligne" data-i18n-placeholder="char.memory.likes_placeholder"></textarea></div>
+                <div style="flex:1; min-width:180px;"><label data-i18n="char.memory.events_label">Événements importants</label><textarea id="cm-events" rows="2" placeholder="un événement par ligne" data-i18n-placeholder="char.memory.events_placeholder"></textarea></div>
+                <div style="flex:1; min-width:180px;"><label data-i18n="char.memory.prefs_label">Préférences de l'utilisateur apprises</label><textarea id="cm-prefs" rows="2" placeholder="un élément par ligne" data-i18n-placeholder="char.memory.likes_placeholder"></textarea></div>
               </div>
               <label style="margin-top:8px;" data-i18n="char.memory.rel_history_label">Histoire relationnelle</label>
-              <textarea id="cm-rel_history" rows="2" placeholder="résumé de la relation actuelle" data-i18n-placeholder="char.memory.rel_history_placeholder"></textarea>
+              <textarea id="cm-rel_history" rows="2" placeholder="Résumé de la relation actuelle…" data-i18n-placeholder="char.memory.rel_history_placeholder"></textarea>
               <h3 style="font-size:14px; margin:10px 0 6px;" data-i18n="char.memory.short_title">Mémoire courte (état actuel)</h3>
               <p class="hint" style="margin-top:-4px;" data-i18n="char.memory.short_hint">L'humeur (affection, énergie, etc.) est calculée automatiquement et visible dans la conversation — pas ici.</p>
               <div class="row" style="gap:12px; flex-wrap:wrap;">
-                <div style="flex:1; min-width:140px;"><label data-i18n="char.memory.topic_label">Dernier sujet</label><input id="cm-topic" placeholder="auto-mis à jour" data-i18n-placeholder="char.memory.topic_placeholder"></div>
-                <div style="flex:1; min-width:180px;"><label data-i18n="char.memory.rel_state_label">État de la relation</label><input id="cm-rel_state" placeholder="ex : chaleureuse, tendue…" data-i18n-placeholder="char.memory.rel_state_placeholder"></div>
+                <div style="flex:1; min-width:140px;"><label data-i18n="char.memory.topic_label">Dernier sujet</label><input id="cm-topic" placeholder="Mis à jour automatiquement" data-i18n-placeholder="char.memory.topic_placeholder"></div>
+                <div style="flex:1; min-width:180px;"><label data-i18n="char.memory.rel_state_label">État de la relation</label><input id="cm-rel_state" placeholder="ex : amicale, distante, tendue…" data-i18n-placeholder="char.memory.rel_state_placeholder"></div>
               </div>
               <button class="btn sm" id="cm-save" style="margin-top:8px;" data-i18n="char.memory.save_btn">Enregistrer la mémoire structurée</button>
             </div>
@@ -262,7 +262,7 @@
                 <option value="long" data-i18n="char.memory.kind_long">Long terme</option>
                 <option value="short" data-i18n="char.memory.kind_short">Court terme</option>
               </select>
-              <input id="mem-input" placeholder="Ajouter un souvenir / fait à retenir…" style="flex:1; min-width:200px;" data-i18n-placeholder="char.memory.add_placeholder">
+              <input id="mem-input" placeholder="Ajouter un souvenir ou un fait à retenir…" style="flex:1; min-width:200px;" data-i18n-placeholder="char.memory.add_placeholder">
               <button class="btn sm" id="mem-add" data-i18n="char.memory.add_btn">Ajouter</button>
               <button class="btn sm ghost" id="mem-summarize" data-i18n="char.memory.summarize_btn">Résumer en long terme</button>
             </div>
@@ -302,7 +302,7 @@
         <h2 data-i18n="scenario.new_title">New scenario</h2>
         <input type="hidden" id="sc-id">
         <div class="row" style="gap:12px; flex-wrap:wrap;">
-          <div style="flex:2; min-width:200px;"><label data-i18n="scenario.title_label">Titre</label><input id="sc-title" placeholder="ex : Nuit de pluie" data-i18n-placeholder="scenario.title_placeholder"></div>
+          <div style="flex:2; min-width:200px;"><label data-i18n="scenario.title_label">Titre</label><input id="sc-title" placeholder="ex : Première rencontre" data-i18n-placeholder="scenario.title_placeholder"></div>
         </div>
         <div class="row" style="gap:12px; flex-wrap:wrap; margin-top:8px;">
           <div style="flex:1; min-width:140px;">
@@ -320,7 +320,7 @@
               <option value="rooftop" data-i18n="scenario.place.rooftop">🌆 Rooftop</option><option value="library" data-i18n="scenario.place.library">📚 Bibliothèque</option>
               <option value="custom" data-i18n="scenario.place.custom">✏️ Personnalisé…</option>
             </select>
-            <input id="sc-place-custom" placeholder="lieu personnalisé" data-i18n-placeholder="scenario.place_custom_placeholder" style="display:none;margin-top:4px;">
+            <input id="sc-place-custom" placeholder="Saisis un lieu personnalisé…" data-i18n-placeholder="scenario.place_custom_placeholder" style="display:none;margin-top:4px;">
           </div>
           <div style="flex:1; min-width:140px;">
             <label data-i18n="scenario.mood_label">Ambiance</label>
@@ -357,11 +357,11 @@
           </div>
         </div>
         <label style="margin-top:10px;" data-i18n="scenario.goal_label">Objectif (ce que le personnage cherche)</label>
-        <input id="sc-goal" placeholder="ex : Faire avouer ses sentiments" data-i18n-placeholder="scenario.goal_placeholder">
+        <input id="sc-goal" placeholder="ex : Accomplir une tâche commune" data-i18n-placeholder="scenario.goal_placeholder">
         <label data-i18n="scenario.conflict_label">Conflit (ce qui s'y oppose)</label>
-        <input id="sc-conflict" placeholder="ex : Il a peur d'être rejeté" data-i18n-placeholder="scenario.conflict_placeholder">
+        <input id="sc-conflict" placeholder="ex : Un malentendu complique la situation" data-i18n-placeholder="scenario.conflict_placeholder">
         <label data-i18n="scenario.notes_label">Notes d'ambiance (accroche narrative)</label>
-        <textarea id="sc-notes" rows="3" placeholder="Il pleut depuis des heures. La lumière vacille. Le silence entre vous dit tout ce que les mots n'osent pas." data-i18n-placeholder="scenario.notes_placeholder"></textarea>
+        <textarea id="sc-notes" rows="3" placeholder="Ajoute le contexte, l’ambiance ou les contraintes utiles…" data-i18n-placeholder="scenario.notes_placeholder"></textarea>
         <div class="row" style="margin-top:12px; gap:8px;">
           <button class="btn ghost" id="sc-generate" data-i18n="scenario.generate_btn">✨ Générer via LLM</button>
           <button class="btn" id="sc-save" data-i18n="scenario.save_btn">Enregistrer</button>
@@ -436,9 +436,9 @@
       <div class="panel">
         <h2 data-i18n="studio.generation_title">Génération</h2>
         <label data-i18n="studio.prompt_label">Prompt</label>
-        <textarea id="studio-prompt" placeholder="ex : a woman sitting in a cozy library, warm light" data-i18n-placeholder="studio.prompt_placeholder"></textarea>
+        <textarea id="studio-prompt" placeholder="ex : character in a quiet room, soft natural light" data-i18n-placeholder="studio.prompt_placeholder"></textarea>
         <label data-i18n="studio.negative_label">Prompt négatif (optionnel)</label>
-        <input id="studio-negative" placeholder="blurry, low quality…" data-i18n-placeholder="studio.negative_placeholder">
+        <input id="studio-negative" placeholder="ex : blurry, low quality, distorted…" data-i18n-placeholder="studio.negative_placeholder">
         <div class="row" style="margin-top:12px; gap:8px;">
           <button class="btn" id="studio-generate-btn" data-i18n="studio.generate_btn">Generate</button>
           <span id="studio-generate-status" class="hint"></span>
@@ -457,7 +457,7 @@
         <div class="row" style="gap:8px; align-items:flex-end;">
           <div style="flex:1; min-width:240px;">
             <label data-i18n="library.folder_label">Chemin du dossier</label>
-            <input id="library-new-folder" placeholder="ex : E:\STM\Data\Packages\ComfyUI\models" data-i18n-placeholder="library.folder_placeholder">
+            <input id="library-new-folder" placeholder="ex : C:\AI\ComfyUI\models" data-i18n-placeholder="library.folder_placeholder">
           </div>
           <div style="min-width:160px;">
             <label data-i18n="library.kind_label">Type forcé (optionnel)</label>
@@ -492,7 +492,7 @@
           " data-i18n="library.multisel_btn">☑ Sélection multiple</button>
         </div>
         <div class="row" style="gap:10px; margin-bottom:12px; flex-wrap:wrap;">
-          <input id="library-search" placeholder="Rechercher…" style="flex:1; min-width:180px;" data-i18n-placeholder="library.search_placeholder">
+          <input id="library-search" placeholder="Rechercher un dossier ou un modèle…" style="flex:1; min-width:180px;" data-i18n-placeholder="library.search_placeholder">
           <select id="library-filter-kind" style="max-width:160px;">
             <option value="" data-i18n="library.filter_kind_all">Tous les types</option>
             <option value="checkpoint" data-i18n="library.kind_checkpoint">Checkpoint</option>
@@ -581,8 +581,8 @@
           <summary class="hint" style="cursor:pointer; user-select:none;" data-i18n="lora.add_manual_summary">＋ Ajouter une LoRA manuellement à la pile</summary>
           <div style="margin-top:10px; padding:12px; background:var(--panel-2); border-radius:10px;">
             <div class="row" style="gap:10px; flex-wrap:wrap; align-items:flex-end;">
-              <div style="flex:2; min-width:180px;"><label data-i18n="lora.file_label">Fichier LoRA</label><input id="lora-file" placeholder="ex : detail_slider.safetensors" data-i18n-placeholder="lora.file_placeholder"></div>
-              <div style="flex:1; min-width:100px;"><label data-i18n="lora.trigger_label">Trigger word</label><input id="lora-trigger" placeholder="ex : detailed" data-i18n-placeholder="lora.trigger_placeholder"></div>
+              <div style="flex:2; min-width:180px;"><label data-i18n="lora.file_label">Fichier LoRA</label><input id="lora-file" placeholder="ex : example_style.safetensors" data-i18n-placeholder="lora.file_placeholder"></div>
+              <div style="flex:1; min-width:100px;"><label data-i18n="lora.trigger_label">Trigger word</label><input id="lora-trigger" placeholder="ex : style_token" data-i18n-placeholder="lora.trigger_placeholder"></div>
               <div style="min-width:80px;"><label data-i18n="lora.strength_label">Force modèle</label><input id="lora-strength" type="number" min="0" max="2" step="0.05" value="0.8"></div>
               <div style="min-width:80px;"><label data-i18n="lora.clip_strength_label">Force clip</label><input id="lora-clip-strength" type="number" min="0" max="2" step="0.05" value="1.0"></div>
               <div style="min-width:100px;"><label data-i18n="lora.family_label">Famille</label>
@@ -599,7 +599,7 @@
                 <select id="lora-always"><option value="0" data-i18n="lora.always_no">Non — par trigger</option><option value="1" data-i18n="lora.always_yes">Oui — toutes les générations</option></select>
               </div>
             </div>
-            <div style="margin-top:8px;"><label data-i18n="lora.note_label">Note (optionnelle)</label><input id="lora-note" placeholder="Contexte d'usage, style…" data-i18n-placeholder="lora.note_placeholder"></div>
+            <div style="margin-top:8px;"><label data-i18n="lora.note_label">Note (optionnelle)</label><input id="lora-note" placeholder="Ajoute une note d’utilisation facultative…" data-i18n-placeholder="lora.note_placeholder"></div>
             <button class="btn sm" id="lora-add" style="margin-top:10px;" data-i18n="lora.add_btn">Ajouter à la pile</button>
           </div>
         </details>
@@ -613,7 +613,7 @@
         </div>
         <p class="hint" style="margin-bottom:10px;">LoRAs detected in your model folders. Declare your folders in <b>Library → Watched folders</b>, then scan.</p>
         <div class="row" style="gap:8px; flex-wrap:wrap; margin-bottom:12px;">
-          <input id="lora-lib-search" placeholder="🔍 Rechercher…" style="flex:2; min-width:160px;" data-i18n-placeholder="lora.lib_search_placeholder">
+          <input id="lora-lib-search" placeholder="Rechercher un LoRA…" style="flex:2; min-width:160px;" data-i18n-placeholder="lora.lib_search_placeholder">
           <select id="lora-lib-family" style="flex:1; min-width:120px;">
             <option value="" data-i18n="library.filter_family_all">Toutes les familles</option>
             <option value="flux2_klein">Flux 2 Klein</option>
@@ -861,12 +861,12 @@
         <h2 data-i18n="settings.persona_title">Persona (toi, le joueur)</h2>
         <p class="hint" data-i18n="settings.persona_hint">Ton identité dans le jeu de rôle. Injectée dans chaque conversation pour que les personnages te connaissent. Ton image peut servir de référence dans les scènes de groupe.</p>
         <label data-i18n="settings.persona_name_label">Ton nom</label>
-        <input id="s-persona_name" placeholder="ex : Alex" data-i18n-placeholder="settings.persona_name_placeholder">
+        <input id="s-persona_name" placeholder="Nom de l’utilisateur" data-i18n-placeholder="settings.persona_name_placeholder">
         <label data-i18n="settings.persona_desc_label">Description (who you are, your role, your appearance if you want to appear in images)</label>
-        <textarea id="s-persona_description" placeholder="ex: a 30-year-old photographer, brown hair…" data-i18n-placeholder="settings.persona_desc_placeholder"></textarea>
+        <textarea id="s-persona_description" placeholder="ex : adulte, tempérament calme, tenue décontractée…" data-i18n-placeholder="settings.persona_desc_placeholder"></textarea>
         <div style="margin-top:10px; padding:10px; border:1px solid var(--line); border-radius:10px; background:var(--panel-2);">
           <label data-i18n="settings.persona_krea_token_label">Krea persona token</label>
-          <input id="s-krea2_user_token" placeholder="optional LoRA trigger, ex: sebpersona" data-i18n-placeholder="settings.persona_krea_token_placeholder">
+          <input id="s-krea2_user_token" placeholder="optional LoRA trigger, e.g. user_token" data-i18n-placeholder="settings.persona_krea_token_placeholder">
           <div class="row" style="gap:10px; flex-wrap:wrap; margin-top:8px;">
             <div style="flex:2; min-width:220px;">
               <label data-i18n="settings.persona_krea_lora_label">Krea persona LoRA</label>
@@ -935,7 +935,7 @@
           </div>
           <p id="lmstudio-model-list-status" class="hint" style="margin-top:4px;"></p>
           <label data-i18n="settings.util_key_label">Clé API (optionnelle)</label>
-          <input id="s-lmstudio_api_key" placeholder="vide la plupart du temps, sauf si LM Studio l'exige">
+          <input id="s-lmstudio_api_key" placeholder="optional">
           <p class="hint">Lance LM Studio, charge un modèle, démarre son serveur local (bouton « Start Server »), puis clique « Tester » ci-dessus.</p>
 
           <h3 style="margin-top:16px; font-size:14px;">LM Studio VRAM management</h3>
@@ -1118,7 +1118,7 @@
           <div style="flex:1; min-width:120px;"><label>Device</label>
             <select id="s-whisper_device"><option value="auto">Auto</option><option value="cuda">GPU (cuda)</option><option value="cpu">CPU</option></select>
           </div>
-          <div style="flex:1; min-width:120px;"><label>Language (empty = auto)</label><input id="s-whisper_language" placeholder="fr"></div>
+          <div style="flex:1; min-width:120px;"><label>Language (empty = auto)</label><input id="s-whisper_language" placeholder="auto / fr"></div>
         </div>
         <p class="hint">Requires <code>pip install faster-whisper</code> in the app environment (see README). The model is downloaded automatically on first use.</p>
         <div class="row settings-section-save-row" style="margin-top:16px; gap:8px; align-items:center;">
@@ -1131,10 +1131,10 @@
         <h2 data-i18n="settings.comfy_title">Connexion ComfyUI</h2>
         <p class="hint">Le choix des modèles (UNet/Checkpoint/CLIP/VAE) et des workflows par famille se fait maintenant dans l'onglet <strong data-i18n="nav.studio">Studio Image</strong> — ici, uniquement la connexion au moteur ComfyUI lui-même.</p>
         <label>Dossier de ton install ComfyUI (celui qui contient main.py)</label>
-        <input id="s-comfy_path" placeholder="E:\STM\Data\Packages\ComfyUIFluxKlein9B">
+        <input id="s-comfy_path" placeholder="C:\AI\ComfyUI">
         <div class="row" style="gap:14px;">
           <div style="flex:2; min-width:200px;"><label>ComfyUI Python (empty = auto-detect)</label>
-            <input id="s-comfy_python" placeholder="auto — otherwise …\venv\Scripts\python.exe"></div>
+            <input id="s-comfy_python" placeholder="auto — or C:\AI\ComfyUI\venv\Scripts\python.exe"></div>
           <div style="flex:1; min-width:160px;"><label>ComfyUI address</label><input id="s-comfy_url"></div>
         </div>
         <div class="row" style="gap:14px;">
@@ -1145,7 +1145,7 @@
             </select>
           </div>
           <div style="flex:1; min-width:140px;"><label>Extra arguments</label>
-            <input id="s-comfy_extra_args" placeholder="ex. --lowvram"></div>
+            <input id="s-comfy_extra_args" placeholder="e.g. --lowvram"></div>
           <div style="flex:1; min-width:120px;"><label>Startup delay (s)</label>
             <input id="s-comfy_start_timeout"></div>
         </div>
@@ -1301,7 +1301,7 @@
   </main>
 
   <div id="modal-root"></div>
-  <script src="/icons.js?v=40.0.5"></script>
-  <script src="/app.js?v=40.0.5"></script>
+  <script src="/icons.js?v=40.0.6"></script>
+  <script src="/app.js?v=40.0.6"></script>
 </body>
 </html>

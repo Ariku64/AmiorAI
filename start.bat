@@ -5,7 +5,7 @@ cd /d "%~dp0"
 setlocal
 
 REM One-time acknowledgement of the bundled legal notice.
-set "LEGAL_VERSION=v40.0.5"
+set "LEGAL_VERSION=v40.0.6"
 set "LEGAL_MARKER=%LOCALAPPDATA%\AmiorAI\legal_acceptance_%LEGAL_VERSION%.txt"
 if not defined LOCALAPPDATA set "LEGAL_MARKER=%~dp0.legal_acceptance_%LEGAL_VERSION%.txt"
 if exist "%LEGAL_MARKER%" goto legal_ok

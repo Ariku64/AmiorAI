@@ -1,6 +1,6 @@
 # AmiorAI — Conditions d’utilisation, avertissement et limitation de responsabilité
 
-**Applicable à partir de la version v40.0.5 — 12 juillet 2026**  
+**Applicable à partir de la version v40.0.6 — 12 juillet 2026**  
 **Projet / mainteneur public : AmiorAI / Ariku**  
 **Copyright © 2026 Ariku — Code source sous licence Apache-2.0**
 
@@ -94,7 +94,7 @@ Ce document constitue un cadre général de distribution et d’utilisation. Il 
 
 # AmiorAI — Terms of Use, Disclaimer and Limitation of Liability
 
-**Applicable from version v40.0.5 — July 12, 2026**  
+**Applicable from version v40.0.6 — July 12, 2026**  
 **Public project / maintainer name: AmiorAI / Ariku**  
 **Copyright © 2026 Ariku — Source code licensed under Apache-2.0**
 

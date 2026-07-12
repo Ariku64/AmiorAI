@@ -9,12 +9,12 @@
 </p>
 
 <p align="center">
-  <a href="README\_FR.md">Français</a> · <strong>English</strong>
+  <a href="README\\\_FR.md">Français</a> · <strong>English</strong>
 </p>
 
 <p align="center">
-  <a href="https://discord.gg/aUjZNSbUBp">
-    <img src="https://img.shields.io/badge/Join%20the%20Discord-5865F2?style=for-the-badge\&logo=discord\&logoColor=white" alt="Join the AmiorAI Discord">
+  <a href="https://discord.gg/wYqhQBJV5z">
+    <img src="https://img.shields.io/badge/Join%20the%20Discord-5865F2?style=for-the-badge\\\&logo=discord\\\&logoColor=white" alt="Join the AmiorAI Discord">
   </a>
 </p>
 
@@ -78,7 +78,7 @@ No model weights are bundled in the repository or release archive.
 Download the latest AmiorAI archive from the GitHub **Releases** page. Extract it into a writable folder such as:
 
 ```text
-D:\\AmiorAI
+D:\\\\AmiorAI
 ```
 
 Do not run AmiorAI directly from inside the ZIP archive.
@@ -139,13 +139,13 @@ http://127.0.0.1:8188
 For the recommended Chatterbox engine, run:
 
 ```text
-tts\_server\\install.bat
+tts\\\_server\\\\install.bat
 ```
 
 For the optional experimental Qwen engine, run:
 
 ```text
-tts\_server\\install\_qwen.bat
+tts\\\_server\\\\install\\\_qwen.bat
 ```
 
 Both engines use separate Python Embedded runtimes and do not require a system Python installation.
@@ -163,7 +163,7 @@ A simple first session is:
 7. Use **Bring this scene to life** to generate the current scene.
 8. Use **▶ Listen** below a character reply after enabling TTS.
 9. Review generated images in **Gallery**.
-10. Back up `%LOCALAPPDATA%\\AmiorAI\\data` before major upgrades.
+10. Back up `%LOCALAPPDATA%\\\\AmiorAI\\\\data` before major upgrades.
 
 ## Documentation
 
@@ -218,7 +218,7 @@ Avoid unofficial repacks from unknown sources.
 5. Wait for the installation-complete message.
 6. Start AmiorAI with `start.bat`.
 
-The main application runtime is stored in `python\_embed`. It is independent from the two optional TTS runtimes.
+The main application runtime is stored in `python\\\_embed`. It is independent from the two optional TTS runtimes.
 
 ## 3\. Configure LM Studio
 
@@ -278,10 +278,10 @@ Typical paths:
 
 ```text
 ComfyUI folder:
-D:\\ComfyUI\_windows\_portable\\ComfyUI
+D:\\\\ComfyUI\\\_windows\\\_portable\\\\ComfyUI
 
 ComfyUI Python:
-D:\\ComfyUI\_windows\_portable\\python\_embeded\\python.exe
+D:\\\\ComfyUI\\\_windows\\\_portable\\\\python\\\_embeded\\\\python.exe
 ```
 
 The selected ComfyUI folder must directly contain `main.py`.
@@ -322,22 +322,22 @@ The bundled unified Krea 2 workflow expects selectable components such as:
 
 ```text
 Diffusion model:
-krea2\_turbo\_fp8\_scaled.safetensors
+krea2\\\_turbo\\\_fp8\\\_scaled.safetensors
 
 Text encoder:
-qwen3vl\_4b\_fp8\_scaled.safetensors
+qwen3vl\\\_4b\\\_fp8\\\_scaled.safetensors
 
 VAE:
-qwen\_image\_vae.safetensors
+qwen\\\_image\\\_vae.safetensors
 ```
 
 Typical folders:
 
 ```text
-ComfyUI\\models\\diffusion\_models\\
-ComfyUI\\models\\text\_encoders\\
-ComfyUI\\models\\vae\\
-ComfyUI\\models\\loras\\
+ComfyUI\\\\models\\\\diffusion\\\_models\\\\
+ComfyUI\\\\models\\\\text\\\_encoders\\\\
+ComfyUI\\\\models\\\\vae\\\\
+ComfyUI\\\\models\\\\loras\\\\
 ```
 
 Inside **Studio Image**:
@@ -405,13 +405,13 @@ AmiorAI v40 provides two fully local voice engines:
 Run:
 
 ```text
-tts\_server\\install.bat
+tts\\\_server\\\\install.bat
 ```
 
 This creates:
 
 ```text
-tts\_server\\python\_chatterbox
+tts\\\_server\\\\python\\\_chatterbox
 ```
 
 The installer uses an isolated official Python 3.11.9 Embedded runtime.
@@ -419,7 +419,7 @@ The installer uses an isolated official Python 3.11.9 Embedded runtime.
 If AmiorAI reports `No module named 'chatterbox'`, close AmiorAI and run:
 
 ```text
-tts\_server\\repair\_chatterbox.bat
+tts\\\_server\\\\repair\\\_chatterbox.bat
 ```
 
 Wait for `Chatterbox import: OK`, then restart AmiorAI.
@@ -429,13 +429,13 @@ Wait for `Chatterbox import: OK`, then restart AmiorAI.
 Run:
 
 ```text
-tts\_server\\install\_qwen.bat
+tts\\\_server\\\\install\\\_qwen.bat
 ```
 
 This creates the independent runtime:
 
 ```text
-tts\_server\\python\_qwen
+tts\\\_server\\\\python\\\_qwen
 ```
 
 For the strongest Qwen clone, enter the exact words spoken in the reference sample in the character’s **Voice sample transcript** field. The transcript is optional for Chatterbox.
@@ -570,7 +570,7 @@ The mobile interface is intended for a trusted private network.
 On Windows, persistent data is normally stored in:
 
 ```text
-%LOCALAPPDATA%\\AmiorAI\\data
+%LOCALAPPDATA%\\\\AmiorAI\\\\data
 ```
 
 It can contain:
@@ -588,7 +588,7 @@ The source/application folder and the persistent data folder are separate. Remov
 ## Before updating
 
 1. Close AmiorAI.
-2. Back up `%LOCALAPPDATA%\\AmiorAI\\data`.
+2. Back up `%LOCALAPPDATA%\\\\AmiorAI\\\\data`.
 3. Extract the new release into a clean application folder unless the release notes explicitly describe a hotfix overlay.
 4. Do not copy old Python runtimes over newer ones unless instructed.
 5. Start the new release and run Diagnostics.
@@ -602,13 +602,13 @@ The source/application folder and the persistent data folder are separate. Remov
 Close AmiorAI and run:
 
 ```text
-tts\_server\\repair\_chatterbox.bat
+tts\\\_server\\\\repair\\\_chatterbox.bat
 ```
 
 Detailed installation logs are written to:
 
 ```text
-tts\_server\\install\_chatterbox\_pip.log
+tts\\\_server\\\\install\\\_chatterbox\\\_pip.log
 ```
 
 ## The ▶ Listen button is missing
@@ -637,7 +637,7 @@ Use v40.0.3 or later. In **Settings → Voice / TTS**, enable TTS and save the v
 * select the exact ComfyUI Python executable;
 * verify port `8188`;
 * start ComfyUI manually and disable auto-launch;
-* inspect `%LOCALAPPDATA%\\AmiorAI\\data\\logs\\comfyui.log`.
+* inspect `%LOCALAPPDATA%\\\\AmiorAI\\\\data\\\\logs\\\\comfyui.log`.
 
 ## A model is absent from a selector
 
@@ -677,13 +677,13 @@ Important root files:
 
 ```text
 README.md                English GitHub documentation
-README\_FR.md             French GitHub documentation
+README\\\_FR.md             French GitHub documentation
 install.bat              main Windows installer
 start.bat                standard Windows launcher
 LICENSE                  Apache License 2.0
 NOTICE                   AmiorAI copyright notice
-LEGAL\_NOTICE.md          disclaimer and user responsibilities
-THIRD\_PARTY\_NOTICES.md   external component licences and sources
+LEGAL\\\_NOTICE.md          disclaimer and user responsibilities
+THIRD\\\_PARTY\\\_NOTICES.md   external component licences and sources
 .gitignore               local runtimes, models and personal data exclusions
 ```
 
@@ -695,7 +695,7 @@ THIRD\_PARTY\_NOTICES.md   external component licences and sources
 
 The original AmiorAI source code is licensed under the **Apache License 2.0**. See [`LICENSE`](LICENSE) and [`NOTICE`](NOTICE).
 
-AmiorAI is provided **as is**, without warranty. The user remains responsible for installed models, LoRAs, prompts, generated content, backups, hardware stability, privacy, voice rights and compliance with applicable law. Read [`LEGAL\_NOTICE.md`](LEGAL_NOTICE.md) before installing or sharing the application.
+AmiorAI is provided **as is**, without warranty. The user remains responsible for installed models, LoRAs, prompts, generated content, backups, hardware stability, privacy, voice rights and compliance with applicable law. Read [`LEGAL\\\_NOTICE.md`](LEGAL_NOTICE.md) before installing or sharing the application.
 
-Third-party applications, Python packages, model weights, LoRAs, workflows and custom nodes remain governed by their own licences. See [`THIRD\_PARTY\_NOTICES.md`](THIRD_PARTY_NOTICES.md).
+Third-party applications, Python packages, model weights, LoRAs, workflows and custom nodes remain governed by their own licences. See [`THIRD\\\_PARTY\\\_NOTICES.md`](THIRD_PARTY_NOTICES.md).
 
