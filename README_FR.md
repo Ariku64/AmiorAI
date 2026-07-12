@@ -1,24 +1,14 @@
 <p align="center">
-  <img src="web/logo-icon-square.png" alt="Logo AmiorAI" width="150">
-</p>
-
-<h1 align="center">AmiorAI</h1>
-
-<p align="center">
-  <strong>Un compagnon IA gratuit et local pour la conversation, le roleplay, la mémoire des personnages, la génération d’images et la synthèse vocale optionnelle.</strong>
+  <img src="web/amiorai-banner.png" alt="AmiorAI — Compagnon IA gratuit, privé et local" width="100%">
 </p>
 
 <p align="center">
   <strong>Français</strong> · <a href="README.md">English</a>
 </p>
+
 <p align="center">
   <a href="https://discord.gg/wYqhQBJV5z">
-    <img src="https://img.shields.io/badge/Join%20the%20Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Join the AmiorAI Discord">
-  </a>
-</p>
-<p align="center">
-  <a href="https://buymeacoffee.com/ArikuDono">
-    <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me a Coffee" width="217" height="60">
+    <img src="https://img.shields.io/badge/Rejoindre%20le%20Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Rejoindre le Discord AmiorAI">
   </a>
 </p>
 
@@ -26,8 +16,13 @@
   Version actuelle : <strong>v40.0.5</strong> · Windows 10/11 · Apache-2.0
 </p>
 
----
+<p align="center">
+  <a href="https://buymeacoffee.com/ArikuDono">
+    <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me a Coffee" width="217" height="60">
+  </a>
+</p>
 
+---
 ## Qu’est-ce qu’AmiorAI ?
 
 AmiorAI est une application locale permettant de créer des personnages IA et de discuter avec eux au sein de conversations persistantes. Elle se connecte à des logiciels exécutés sur votre propre ordinateur :
