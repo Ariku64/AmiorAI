@@ -19,7 +19,7 @@
 </p>
 
 <p align="center">
-  Current release: <strong>v40.0.5</strong> · Windows 10/11 · Apache-2.0
+  Current release: <strong>v40.0.7</strong> · Windows 10/11 · Apache-2.0
 </p>
 
 <p align="center">
@@ -57,7 +57,7 @@ The application interface, characters, conversations, memories, images and setti
 |Local voice|Chatterbox by default, Qwen3-TTS as an optional advanced engine.|
 |VRAM coordination|Can unload TTS, LM Studio and idle ComfyUI models when another engine needs the GPU.|
 |Mobile/LAN interface|Responsive interface for use on a trusted private local network.|
-|Diagnostics|Checks LM Studio, ComfyUI, models, workflows, paths and optional TTS engines.|
+|Diagnostics|Checks LM Studio, the external ComfyUI API, models, workflows and optional TTS engines.|
 |Multilingual UI|English, French, Spanish and German.|
 
 ## Before downloading
@@ -122,17 +122,18 @@ http://127.0.0.1:1234/v1
 
 ### 5. Connect ComfyUI for images
 
-1. Install and start ComfyUI.
-2. In AmiorAI, open **Settings → ComfyUI**.
-3. Select the ComfyUI folder that directly contains `main.py`.
-4. Select its Python executable if automatic detection fails.
-5. Keep the default API address:
+1. Install ComfyUI separately from its official project or another trusted distribution.
+2. Start ComfyUI with its own launcher.
+3. In AmiorAI, open **Settings → ComfyUI**.
+4. Keep the default API address unless your external ComfyUI uses another one:
 
 ```text
 http://127.0.0.1:8188
 ```
 
-6. Open **Diagnostics** and fix every critical red item before generating an image.
+5. Open **Diagnostics** and fix every critical red item before generating an image.
+
+> AmiorAI does not install, launch, restart or stop ComfyUI. It only communicates with the already running third-party instance through its local HTTP API.
 
 ### 6. Install local voice, optional
 
@@ -262,9 +263,9 @@ http://127.0.0.1:1234/v1
 
 If a model does not appear, verify that the LM Studio server is running and that `/v1/models` exposes the expected model ID.
 
-## 4. Configure ComfyUI
+## 4. Configure external ComfyUI
 
-AmiorAI communicates with ComfyUI through its local API.
+AmiorAI communicates only with a separately installed and already running ComfyUI instance through its local HTTP API.
 
 Default address:
 
@@ -272,45 +273,14 @@ Default address:
 http://127.0.0.1:8188
 ```
 
-### ComfyUI Windows Portable
+1. Install ComfyUI from its official project or another trusted third-party distribution.
+2. Start ComfyUI outside AmiorAI with the launcher or command provided by that installation.
+3. Confirm that ComfyUI opens normally and can generate an image.
+4. In AmiorAI, open **Settings → ComfyUI**.
+5. Enter the ComfyUI API address.
+6. Save the section and run **Diagnostics**.
 
-Typical paths:
-
-```text
-ComfyUI folder:
-D:\ComfyUI_windows_portable\ComfyUI
-
-ComfyUI Python:
-D:\ComfyUI_windows_portable\python_embeded\python.exe
-```
-
-The selected ComfyUI folder must directly contain `main.py`.
-
-### ComfyUI Desktop
-
-Start ComfyUI Desktop once and confirm that it can generate an image. You can then either:
-
-* leave it running manually and disable AmiorAI auto-launch; or
-* point AmiorAI to the actual ComfyUI folder and Python environment.
-
-### Manual, venv or Stability Matrix installation
-
-These installations are supported as long as:
-
-* ComfyUI starts correctly;
-* the configured URL is reachable;
-* AmiorAI knows the folder containing `main.py`;
-* the correct Python executable is selected when auto-launch is enabled.
-
-### Configure inside AmiorAI
-
-1. Open **Settings → ComfyUI**.
-2. Enter the ComfyUI API URL.
-3. Select the folder containing `main.py`.
-4. Select the ComfyUI Python executable if needed.
-5. Enable automatic launch only when both paths are correct.
-6. Save the section.
-7. Open **Diagnostics** and test ComfyUI.
+AmiorAI never downloads, installs, starts, restarts, terminates or updates ComfyUI. Process arguments, Python environments and updates remain managed by the external ComfyUI installation.
 
 ## 5. Image models
 
@@ -631,13 +601,13 @@ Use v40.0.3 or later. In **Settings → Voice / TTS**, enable TTS and save the v
 * test a different utility model for structured JSON tasks;
 * inspect Diagnostics and the application logs.
 
-## AmiorAI cannot start ComfyUI
+## AmiorAI cannot connect to ComfyUI
 
-* select the folder directly containing `main.py`;
-* select the exact ComfyUI Python executable;
-* verify port `8188`;
-* start ComfyUI manually and disable auto-launch;
-* inspect `%LOCALAPPDATA%\AmiorAI\data\logs\comfyui.log`.
+* start the external ComfyUI installation from its own launcher;
+* verify that its API is reachable at `http://127.0.0.1:8188`;
+* update the ComfyUI address in AmiorAI if a different host or port is used;
+* check the console or logs provided by the external ComfyUI installation;
+* run AmiorAI Diagnostics again.
 
 ## A model is absent from a selector
 

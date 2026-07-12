@@ -49,21 +49,23 @@ Open **Settings → Language model**.
 4. Optionally enable and select a separate utility model.
 5. Test the utility model.
 
-## 5. Configure ComfyUI
+## 5. Configure external ComfyUI
 
-Set:
+AmiorAI uses only a separately installed third-party ComfyUI instance.
 
-- the folder that directly contains `main.py`;
-- the ComfyUI Python executable if auto-detection fails;
-- URL `http://127.0.0.1:8188`;
-- auto-launch only when the path and Python executable are correct.
-
-Portable Windows example:
+1. Install ComfyUI from its official project or another trusted distribution.
+2. Start it with its own launcher.
+3. In AmiorAI, open **Settings → ComfyUI**.
+4. Enter the local API address, normally:
 
 ```text
-ComfyUI path:   D:\ComfyUI_windows_portable\ComfyUI
-ComfyUI Python: D:\ComfyUI_windows_portable\python_embeded\python.exe
+http://127.0.0.1:8188
 ```
+
+5. Save and run **Diagnostics**.
+
+AmiorAI never installs, launches, restarts or stops ComfyUI.
+
 
 ## 6. Choose the image engine
 

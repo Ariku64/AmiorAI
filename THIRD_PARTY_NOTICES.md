@@ -1,4 +1,4 @@
-# AmiorAI v40.0.6 — Third-party notices
+# AmiorAI v40.0.7 — Third-party notices
 
 AmiorAI is a free orchestration application. It does not bundle LM Studio, ComfyUI, language-model weights, image-model weights or voice-model weights. Those components are downloaded or installed separately and remain governed by their own licences and terms.
 

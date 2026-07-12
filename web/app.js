@@ -2250,8 +2250,8 @@ async function loadSystem() {
   }
   // ComfyUI
   let comfyTxt = "ComfyUI : ";
-  if (h.comfy.reachable) comfyTxt += "responding" + (h.comfy.managed_by_app ? " (started by the app)" : " (externe)");
-  else comfyTxt += "offline" + (h.comfy.path_exists ? "" : " — main.py not found");
+  if (h.comfy.reachable) comfyTxt += window.t("system.comfy_status_connected");
+  else comfyTxt += window.t("system.comfy_status_offline");
   box.append(statusLine(h.comfy.status, comfyTxt));
   // VRAM
   if (h.comfy.vram) {
@@ -2330,12 +2330,6 @@ async function sysAction(path, label, btn) {
 }
 
 $("#sys-refresh").addEventListener("click", loadSystem);
-$("#sys-comfy-start").addEventListener("click", (e) => sysAction("/api/comfy/start", "Starting ComfyUI", e.target));
-$("#sys-comfy-restart").addEventListener("click", (e) => sysAction("/api/comfy/restart", "Restarting", e.target));
-$("#sys-comfy-stop").addEventListener("click", (e) => sysAction("/api/comfy/stop", "Stop", e.target));
-$("#sys-comfy-kill").addEventListener("click", (e) => {
-  if (confirm("Tuer le process ComfyUI ?")) sysAction("/api/comfy/kill", "Process killed", e.target);
-});
 $("#sys-comfy-free").addEventListener("click", (e) => sysAction("/api/comfy/free", "VRAM freed", e.target));
 $("#sys-llm-free").addEventListener("click", (e) => sysAction("/api/llm/free", "LLM unloaded", e.target));
 
@@ -2511,8 +2505,7 @@ const SF = ["llm_backend", "lmstudio_url", "lmstudio_model", "lmstudio_api_key",
             "tts_vram_offload_enabled", "tts_language", "tts_speed", "tts_exaggeration", "tts_cfg_weight",
             "tts_temperature", "tts_autoplay",
             "whisper_enabled", "whisper_model_size", "whisper_device", "whisper_language",
-            "comfy_path", "comfy_python", "comfy_url", "comfy_autolaunch",
-            "comfy_extra_args", "comfy_start_timeout",
+            "comfy_url",
             "image_resolution",
             "persona_name", "persona_description", "krea2_user_token", "krea2_char2_lora", "krea2_char2_lora_strength", "default_negative", "vram_mode"]
 

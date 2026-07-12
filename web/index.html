@@ -6,8 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>AmiorAI</title>
   <link rel="icon" type="image/png" href="/logo-icon-square.png">
-  <link rel="stylesheet" href="/style.css?v=40.0.6">
-  <link rel="stylesheet" href="/icons.css?v=40.0.6">
+  <link rel="stylesheet" href="/style.css?v=40.0.7">
+  <link rel="stylesheet" href="/icons.css?v=40.0.7">
   <script>
     // Applique le theme AVANT le premier rendu (evite un flash de mauvais theme).
     // "system" = pas d'attribut data-theme : le CSS suit alors prefers-color-scheme
@@ -702,15 +702,11 @@
       </div>
 
       <div class="panel">
-        <h2 data-i18n="system.comfy_title">ComfyUI (moteur image)</h2>
+        <h2 data-i18n="system.comfy_title">ComfyUI tiers (moteur image)</h2>
         <div class="row">
-          <button class="btn sm" id="sys-comfy-start" data-i18n="system.comfy_start_btn">Démarrer</button>
-          <button class="btn sm ghost" id="sys-comfy-restart" data-i18n="system.comfy_restart_btn">Redémarrer</button>
-          <button class="btn sm ghost" id="sys-comfy-stop" data-i18n="system.comfy_stop_btn">Arrêter</button>
-          <button class="btn sm danger" id="sys-comfy-kill" data-i18n="system.comfy_kill_btn">Kill (process bloqué)</button>
           <button class="btn sm ghost" id="sys-comfy-free" data-i18n="system.comfy_free_btn">Libérer la VRAM</button>
         </div>
-        <p class="hint" data-i18n="system.comfy_hint">« Kill » force l'arrêt si ComfyUI est figé. « Libérer la VRAM » décharge ses modèles.</p>
+        <p class="hint" data-i18n="system.comfy_hint">ComfyUI est une application tierce lancée séparément. AmiorAI ne peut que demander le déchargement de ses modèles par l’API locale.</p>
       </div>
 
       <div class="panel">
@@ -1128,27 +1124,10 @@
       </div>
 
       <div class="panel">
-        <h2 data-i18n="settings.comfy_title">Connexion ComfyUI</h2>
-        <p class="hint">Le choix des modèles (UNet/Checkpoint/CLIP/VAE) et des workflows par famille se fait maintenant dans l'onglet <strong data-i18n="nav.studio">Studio Image</strong> — ici, uniquement la connexion au moteur ComfyUI lui-même.</p>
-        <label>Dossier de ton install ComfyUI (celui qui contient main.py)</label>
-        <input id="s-comfy_path" placeholder="C:\AI\ComfyUI">
-        <div class="row" style="gap:14px;">
-          <div style="flex:2; min-width:200px;"><label>ComfyUI Python (empty = auto-detect)</label>
-            <input id="s-comfy_python" placeholder="auto — or C:\AI\ComfyUI\venv\Scripts\python.exe"></div>
-          <div style="flex:1; min-width:160px;"><label>ComfyUI address</label><input id="s-comfy_url"></div>
-        </div>
-        <div class="row" style="gap:14px;">
-          <div style="flex:1; min-width:160px;"><label>Auto-start ComfyUI</label>
-            <select id="s-comfy_autolaunch">
-              <option value="true">yes (background, invisible)</option>
-              <option value="false">no (I start it myself)</option>
-            </select>
-          </div>
-          <div style="flex:1; min-width:140px;"><label>Extra arguments</label>
-            <input id="s-comfy_extra_args" placeholder="e.g. --lowvram"></div>
-          <div style="flex:1; min-width:120px;"><label>Startup delay (s)</label>
-            <input id="s-comfy_start_timeout"></div>
-        </div>
+        <h2 data-i18n="settings.comfy_title">Connexion ComfyUI tiers</h2>
+        <p class="hint" data-i18n="settings.comfy_hint">AmiorAI se connecte uniquement à une installation ComfyUI tierce déjà démarrée. Il ne l’installe, ne la lance et ne l’arrête jamais.</p>
+        <label data-i18n="settings.comfy_url_label">Adresse API de ComfyUI</label>
+        <input id="s-comfy_url" placeholder="http://127.0.0.1:8188">
 
         <h3 style="margin-top:16px; font-size:14px;" data-i18n="settings.comfy_resolution_title">Résolution de génération</h3>
         <select id="s-image_resolution">
@@ -1301,7 +1280,7 @@
   </main>
 
   <div id="modal-root"></div>
-  <script src="/icons.js?v=40.0.6"></script>
-  <script src="/app.js?v=40.0.6"></script>
+  <script src="/icons.js?v=40.0.7"></script>
+  <script src="/app.js?v=40.0.7"></script>
 </body>
 </html>

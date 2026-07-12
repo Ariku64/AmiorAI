@@ -7,7 +7,7 @@ PYTHON="${PYTHON:-python3}"
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$ROOT"
 
-LEGAL_VERSION="v40.0.6"
+LEGAL_VERSION="v40.0.7"
 LEGAL_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/AmiorAI"
 LEGAL_MARKER="$LEGAL_DIR/legal_acceptance_${LEGAL_VERSION}.txt"
 if [ ! -f "$LEGAL_MARKER" ]; then

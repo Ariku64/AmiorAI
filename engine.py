@@ -6,16 +6,16 @@
 engine.py — local AI orchestration.
 
   - Text: LM Studio through its local OpenAI-compatible and native management APIs.
-  - Image: ComfyUI through its local HTTP API, with optional background launch.
+  - Image: a separately installed third-party ComfyUI instance through its local HTTP API.
+    AmiorAI never installs, launches, restarts or terminates ComfyUI.
 
-VRAM coordination swaps LM Studio, ComfyUI and the optional CUDA TTS engine so only
+VRAM coordination swaps LM Studio, external ComfyUI and the optional CUDA TTS engine so only
 the model required by the current task occupies the GPU. No LLM or TTS weights are
 loaded inside the main AmiorAI Python process.
 """
 
 import atexit
 import logging
-import glob
 import json
 import os
 import random
@@ -45,7 +45,6 @@ from app_paths import CODE_ROOT, DATA_ROOT, WF_DIR, IMG_DIR, LOG_DIR, IS_FROZEN 
 ROOT = CODE_ROOT  # garde pour compatibilite avec le code existant ci-dessous
 
 _LOCK = threading.RLock()
-_comfy = {"proc": None, "log": None}
 _tts = {"proc": None, "log": None}
 
 # Shared LM Studio activity state exposed to the diagnostics UI.
@@ -466,7 +465,7 @@ def llm_chat(messages, settings, max_tokens=None, temperature=None, stop=None):
 
 
 # --------------------------------------------------------------------------- #
-#  ComfyUI : pilotage du process en arriere-plan
+#  ComfyUI tiers : connexion exclusive par API HTTP locale
 # --------------------------------------------------------------------------- #
 def _comfy_base(settings):
     return (settings.get("comfy_url") or "http://127.0.0.1:8188").rstrip("/")
@@ -482,29 +481,6 @@ def _comfy_is_up(settings):
             continue
     return False
 
-
-def _resolve_comfy_python(settings):
-    """Trouve un Python capable de lancer ComfyUI (priorite : reglage, puis venv, puis Stability Matrix)."""
-    manual = (settings.get("comfy_python") or "").strip()
-    if manual and os.path.exists(manual):
-        return manual
-    cpath = (settings.get("comfy_path") or "").strip()
-    candidates = []
-    if cpath:
-        candidates += [
-            os.path.join(cpath, "venv", "Scripts", "python.exe"),   # Windows venv
-            os.path.join(cpath, "venv", "bin", "python"),           # Linux venv
-            os.path.join(cpath, ".venv", "Scripts", "python.exe"),
-            os.path.join(cpath, ".venv", "bin", "python"),
-        ]
-        # Stability Matrix : .../Data/Packages/<pkg> -> .../Data/Assets/Python*/python.exe
-        data_root = os.path.dirname(os.path.dirname(cpath))
-        candidates += glob.glob(os.path.join(data_root, "Assets", "Python*", "python.exe"))
-        candidates += glob.glob(os.path.join(data_root, "Assets", "Python*", "bin", "python"))
-    for c in candidates:
-        if c and os.path.exists(c):
-            return c
-    return ""
 
 
 def _tts_vram_offload_enabled(settings):
@@ -582,77 +558,16 @@ def _unload_lmstudio_before_image(settings):
 
 
 def comfy_ensure(settings):
-    """S'assure qu'un ComfyUI repond ; en lance un en arriere-plan si besoin et si autorise."""
+    """Require a separately installed third-party ComfyUI instance to be reachable."""
     if _comfy_is_up(settings):
         return
-    autolaunch = str(settings.get("comfy_autolaunch", "true")).lower() in ("1", "true", "yes", "oui")
-    if not autolaunch:
-        raise RuntimeError("ComfyUI is not started. Launch it with Stability Matrix, then try again.")
-
-    cpath = (settings.get("comfy_path") or "").strip()
-    main_py = os.path.join(cpath, "main.py")
-    if not cpath or not os.path.exists(main_py):
-        raise RuntimeError(
-            "Unable to auto-start ComfyUI: 'main.py' was not found in the "
-            f"ComfyUI path ({cpath}). Check the setting, or start ComfyUI manually with Stability Matrix."
-        )
-    python = _resolve_comfy_python(settings)
-    if not python:
-        raise RuntimeError(
-            "Unable to auto-detect ComfyUI Python. Set 'comfy_python' in Settings "
-            "(ex. <dossier ComfyUI>\\venv\\Scripts\\python.exe), ou lance ComfyUI a la main."
-        )
-
     base = _comfy_base(settings)
-    port = urllib.parse.urlparse(base).port or 8188
-    args = [python, main_py, "--port", str(port), "--listen", "127.0.0.1"]
-    extra = (settings.get("comfy_extra_args") or "").split()
-    args += extra
-
-    creationflags = 0
-    if os.name == "nt":
-        creationflags = 0x08000000  # CREATE_NO_WINDOW : pas de fenetre console
-
-    logpath = os.path.join(LOG_DIR, "comfyui.log")
-    _comfy["log"] = open(logpath, "w", encoding="utf-8", errors="replace")
-    _comfy["proc"] = subprocess.Popen(
-        args, cwd=cpath, stdout=_comfy["log"], stderr=subprocess.STDOUT,
-        creationflags=creationflags,
+    raise RuntimeError(
+        f"External ComfyUI is not reachable at {base}. "
+        "Start ComfyUI from its own launcher, verify that its API is enabled, "
+        "then check the ComfyUI address in AmiorAI Settings."
     )
 
-    deadline = time.time() + int(settings.get("comfy_start_timeout", 240))
-    while time.time() < deadline:
-        if _comfy_is_up(settings):
-            return
-        if _comfy["proc"].poll() is not None:
-            raise RuntimeError(
-                "ComfyUI s'est arrete au demarrage. Check the persistent logs/comfyui.log file for the cause "
-                "(souvent : mauvais Python, dependances manquantes)."
-            )
-        time.sleep(1.5)
-    raise RuntimeError("ComfyUI n'a pas demarre dans le delai imparti (see the persistent logs/comfyui.log file).")
-
-
-def comfy_stop():
-    p = _comfy.get("proc")
-    if p and p.poll() is None:
-        try:
-            p.terminate()
-            try:
-                p.wait(timeout=10)
-            except Exception:
-                p.kill()
-        except Exception:
-            pass
-    if _comfy.get("log"):
-        try:
-            _comfy["log"].close()
-        except Exception:
-            pass
-    _comfy["proc"] = None
-
-
-atexit.register(comfy_stop)
 
 
 def comfy_free(settings):
@@ -673,12 +588,11 @@ def comfy_free(settings):
 
 
 def comfy_status(settings):
-    p = _comfy.get("proc")
-    ours = bool(p and p.poll() is None)
     return {
         "reachable": _comfy_is_up(settings),
-        "managed_by_app": ours,
-        "pid": (p.pid if ours else None),
+        "external": True,
+        "managed_by_app": False,
+        "pid": None,
     }
 
 
@@ -824,35 +738,6 @@ def prepare_vram_for_lmstudio(settings, role):
         log.warning(f"[VRAM] ComfyUI did not confirm release after {release_timeout:g} s, continuing carefully")
     # Dans tous les cas (confirme ou non), on rend la main : comfy_free() a deja ete appelee
     # avec succes plus haut, le polling n'est qu'une verification best-effort supplementaire.
-
-
-def comfy_start(settings, force=True):
-    """Force le demarrage de ComfyUI (bouton Start). Ne relance pas s'il repond deja."""
-    if _comfy_is_up(settings):
-        return {"ok": True, "msg": "ComfyUI repond deja."}
-    s = dict(settings)
-    if force:
-        s["comfy_autolaunch"] = "true"
-    comfy_ensure(s)
-    return {"ok": True, "msg": "ComfyUI demarre."}
-
-
-def comfy_kill(settings):
-    """Tue le process ComfyUI lance par l'appli (process bloque)."""
-    p = _comfy.get("proc")
-    if p and p.poll() is None:
-        try:
-            p.kill()
-        except Exception:
-            pass
-    comfy_stop()
-    return {"ok": True, "msg": "Process ComfyUI arrete (kill)."}
-
-
-def comfy_restart(settings):
-    comfy_kill(settings)
-    time.sleep(2.0)
-    return comfy_start(settings, force=True)
 
 
 # --------------------------------------------------------------------------- #

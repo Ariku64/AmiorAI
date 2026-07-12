@@ -1,5 +1,18 @@
 # AmiorAI — Journal des modifications
 
+
+## v40.0.7 — 12 juillet 2026
+
+### ComfyUI tiers uniquement
+
+- Suppression complète du lanceur ComfyUI intégré à AmiorAI.
+- Suppression des réglages de dossier, Python, arguments, délai et lancement automatique ComfyUI.
+- Suppression des commandes Démarrer, Redémarrer, Arrêter et Kill dans la page Système.
+- AmiorAI se connecte désormais uniquement à une instance ComfyUI tierce déjà démarrée via son API HTTP locale.
+- Conservation des fonctions API utiles : génération, diagnostic, lecture de la file, catalogue de modèles et libération de VRAM.
+- Migration automatique supprimant les anciens réglages de gestion de processus ComfyUI.
+- Documentation et traductions FR/EN/ES/DE mises à jour.
+
 ## v40.0.6 — 12 juillet 2026
 
 ### Exemples de saisie génériques

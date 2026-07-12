@@ -3,8 +3,8 @@
     "lang": "fr",
     "name": "Français",
     "fallback": "en",
-    "version": "40.0.6",
-    "generated": "2026-07-11T20:57:14.923808"
+    "version": "40.0.7",
+    "generated": "2026-07-12T10:28:19.046666"
   },
   "nav": {
     "characters": "Personnages",
@@ -669,15 +669,13 @@
   "system": {
     "title": "Système",
     "refresh_btn": "Rafraîchir",
-    "sub": "État des moteurs et contrôle des process. Vérifie ici si quelque chose coince.",
+    "sub": "État des moteurs et connexions API locales. Vérifiez ici si un service est indisponible.",
     "health_title": "État (health check)",
-    "comfy_title": "ComfyUI (moteur image)",
-    "comfy_start_btn": "Démarrer",
-    "comfy_restart_btn": "Redémarrer",
-    "comfy_stop_btn": "Arrêter",
-    "comfy_kill_btn": "Kill (process bloqué)",
+    "comfy_title": "ComfyUI tiers (moteur image)",
+    "comfy_status_connected": "connecté",
+    "comfy_status_offline": "hors ligne — démarrez ComfyUI depuis son propre lanceur",
     "comfy_free_btn": "Libérer la VRAM",
-    "comfy_hint": "« Kill » force l'arrêt si ComfyUI est figé. « Libérer la VRAM » décharge ses modèles.",
+    "comfy_hint": "ComfyUI est une application tierce installée séparément. Démarrez, arrêtez ou redémarrez-la depuis son propre lanceur. AmiorAI peut uniquement demander le déchargement de ses modèles via l’API locale.",
     "llm_title": "LLM",
     "llm_idle": "— en attente d'activité —",
     "llm_load_btn": "Charger le LLM maintenant",
@@ -719,6 +717,7 @@
     "offline": "hors ligne"
   },
   "settings": {
+    "comfy_url_label": "Adresse API de ComfyUI",
     "title": "Réglages",
     "sub": "Un seul programme charge ton LLM et ton modèle image. Tout reste sur ta machine.",
     "save_btn": "Enregistrer les réglages",
@@ -769,8 +768,8 @@
     "whisper_title": "Voix — dictée (reconnaissance vocale)",
     "whisper_hint": "Te permet de parler au lieu d'écrire, transcrit localement via Whisper (100% hors-ligne, aucun envoi externe).",
     "whisper_enabled_label": "Activer la dictée (micro)",
-    "comfy_title": "Connexion ComfyUI",
-    "comfy_hint": "Le choix des modèles (UNet/Checkpoint/CLIP/VAE) et des workflows par famille se fait maintenant dans l'onglet <strong>Studio Image</strong> — ici, uniquement la connexion au moteur ComfyUI lui-même.",
+    "comfy_title": "Connexion ComfyUI tiers",
+    "comfy_hint": "AmiorAI se connecte uniquement à une installation ComfyUI tierce déjà démarrée. Il n’installe, ne lance, ne redémarre et n’arrête jamais ComfyUI. Les modèles et workflows se choisissent dans <strong>Studio Image</strong>.",
     "comfy_resolution_title": "Résolution de génération",
     "comfy_negative_label": "Prompt négatif par défaut (laisse vide pour FLUX.2)",
     "comfy_goto_studio_btn": "🎛️ Aller à Studio Image →",
@@ -1154,6 +1153,6 @@
     "global_engine_label": "Moteur d’image global"
   },
   "meta": {
-    "version": "40.0.6"
+    "version": "40.0.4"
   }
 }

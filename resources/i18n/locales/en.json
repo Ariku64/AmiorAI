@@ -3,8 +3,8 @@
     "lang": "en",
     "name": "English",
     "fallback": null,
-    "version": "40.0.6",
-    "generated": "2026-07-11T20:57:14.923808"
+    "version": "40.0.7",
+    "generated": "2026-07-12T10:28:19.046666"
   },
   "nav": {
     "characters": "Characters",
@@ -669,15 +669,13 @@
   "system": {
     "title": "System",
     "refresh_btn": "Refresh",
-    "sub": "Engine status and process control. Check here if something is stuck.",
+    "sub": "Engine status and local API connections. Check here if something is unavailable.",
     "health_title": "Status (health check)",
-    "comfy_title": "ComfyUI (image engine)",
-    "comfy_start_btn": "Start",
-    "comfy_restart_btn": "Restart",
-    "comfy_stop_btn": "Stop",
-    "comfy_kill_btn": "Kill (stuck process)",
+    "comfy_title": "External ComfyUI (image engine)",
+    "comfy_status_connected": "connected",
+    "comfy_status_offline": "offline — start ComfyUI from its own launcher",
     "comfy_free_btn": "Free VRAM",
-    "comfy_hint": "'Kill' forces stop if ComfyUI is frozen. 'Free VRAM' unloads its models.",
+    "comfy_hint": "ComfyUI is a separately installed third-party application. Start, stop or restart it from its own launcher. AmiorAI can only request model unloading through the local API.",
     "llm_title": "LLM",
     "llm_idle": "— waiting for activity —",
     "llm_load_btn": "Load LLM now",
@@ -719,6 +717,7 @@
     "offline": "offline"
   },
   "settings": {
+    "comfy_url_label": "ComfyUI API address",
     "title": "Settings",
     "sub": "One program loads your LLM and image model. Everything stays on your machine.",
     "save_btn": "Save settings",
@@ -769,8 +768,8 @@
     "whisper_title": "Voice — dictation (speech recognition)",
     "whisper_hint": "Lets you speak instead of type, transcribed locally via Whisper (100% offline, nothing sent externally).",
     "whisper_enabled_label": "Enable dictation (microphone)",
-    "comfy_title": "ComfyUI connection",
-    "comfy_hint": "Model selection (UNet/Checkpoint/CLIP/VAE) and workflows per family is now in the <strong>Image Studio</strong> tab — here, only the ComfyUI engine connection.",
+    "comfy_title": "External ComfyUI connection",
+    "comfy_hint": "AmiorAI only connects to an already running third-party ComfyUI installation. It never installs, launches, restarts or stops ComfyUI. Image models and workflows are selected in <strong>Image Studio</strong>.",
     "comfy_resolution_title": "Generation resolution",
     "comfy_negative_label": "Default negative prompt (leave blank for FLUX.2)",
     "comfy_goto_studio_btn": "🎛️ Go to Image Studio →",
@@ -1154,6 +1153,6 @@
     "global_engine_label": "Global image engine"
   },
   "meta": {
-    "version": "40.0.6"
+    "version": "40.0.4"
   }
 }

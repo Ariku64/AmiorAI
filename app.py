@@ -85,8 +85,7 @@ _SETTINGS_NEVER_EXPOSE = frozenset({
 # Réglages modifiables uniquement depuis localhost (admin-only)
 _SETTINGS_ADMIN_ONLY = frozenset({
     "lan_mode", "lan_access_code", "lan_access_code_hash",
-    "comfy_path", "comfy_url", "comfy_autolaunch",
-    "comfy_python", "lmstudio_url",
+    "comfy_url", "lmstudio_url",
     "civitai_token",
 })
 
@@ -361,7 +360,7 @@ _LAN_LOGIN_HTML = """<!DOCTYPE html>
 
 
 APP_NAME = "AmiorAI"
-APP_VERSION = "v40.0.6"
+APP_VERSION = "v40.0.7"
 
 # --------------------------------------------------------------------------- #
 #  Chemins et constantes — source unique : app_paths.py
@@ -437,13 +436,8 @@ DEFAULT_SETTINGS = {
     "whisper_model_size": "small",                  # tiny / base / small / medium / large-v3
     "whisper_device": "auto",
     "whisper_language": "",                         # vide = detection auto
-    # ---- Image (via ComfyUI, pilote en arriere-plan) ----
-    "comfy_path": "",                                          # dossier de l'install ComfyUI (contient main.py) — à configurer dans Réglages
-    "comfy_python": "",                          # vide = auto (venv du package / Python de Stability Matrix)
-    "comfy_url": "http://127.0.0.1:8188",        # adresse de ComfyUI
-    "comfy_autolaunch": "true",                  # true = l'appli lance ComfyUI toute seule en arriere-plan
-    "comfy_extra_args": "",                       # arguments en plus passes a main.py (ex. --lowvram)
-    "comfy_start_timeout": "240",                # delai max d'attente du demarrage de ComfyUI (s)
+    # ---- Image (ComfyUI tiers, connexion API uniquement) ----
+    "comfy_url": "http://127.0.0.1:8188",        # adresse de l'instance ComfyUI lancee separement
     "t2i_workflow": "t2i.json",
     "i2i_workflow": "i2i.json",
     "duo_workflow": "duo.json",
@@ -536,6 +530,12 @@ DEFAULT_SETTINGS = {
     # ---- Langue de l'interface (i18n) ----
     "ui_language": "en",                          # fr / en / es / de — interface language and LLM prompt language
 }
+# Obsolete since v40.0.7: AmiorAI no longer manages a ComfyUI process.
+_OBSOLETE_COMFY_PROCESS_SETTINGS = frozenset({
+    "comfy_path", "comfy_python", "comfy_autolaunch",
+    "comfy_extra_args", "comfy_start_timeout",
+})
+
 
 # --------------------------------------------------------------------------- #
 #  Base de donnees
@@ -909,6 +909,11 @@ def init_db():
         had_tts_engine = c.execute("SELECT 1 FROM settings WHERE key='tts_engine'").fetchone()
         for k, v in DEFAULT_SETTINGS.items():
             c.execute("INSERT OR IGNORE INTO settings(key, value) VALUES (?, ?)", (k, v))
+        # v40.0.7 migration: remove settings that allowed AmiorAI to launch or stop ComfyUI.
+        c.executemany(
+            "DELETE FROM settings WHERE key=?",
+            [(key,) for key in _OBSOLETE_COMFY_PROCESS_SETTINGS],
+        )
         # v40 migration: an installation coming from XTTS has no tts_engine key.
         # Switch it explicitly to Chatterbox and allow enough time for the first model download.
         if not had_tts_engine:
@@ -930,6 +935,8 @@ def get_settings():
         rows = c.execute("SELECT key, value FROM settings").fetchall()
     s = dict(DEFAULT_SETTINGS)
     s.update({r["key"]: r["value"] for r in rows})
+    for key in _OBSOLETE_COMFY_PROCESS_SETTINGS:
+        s.pop(key, None)
     # v38.1.2 architecture: LM Studio is the only supported text backend.
     s["llm_backend"] = "lmstudio"
     s["llm_util_backend"] = "lmstudio"
@@ -942,6 +949,8 @@ def get_settings():
 
 def save_settings(d):
     clean = dict(d or {})
+    for key in _OBSOLETE_COMFY_PROCESS_SETTINGS:
+        clean.pop(key, None)
     # Ignore legacy backend values from an older UI or database.
     clean["llm_backend"] = "lmstudio"
     clean["llm_util_backend"] = "lmstudio"
@@ -1005,13 +1014,13 @@ def _decode_data_url(data_url, label, max_bytes):
 
 
 # --------------------------------------------------------------------------- #
-#  Moteur d'inference local (LLM + image, dans le meme process)
+#  Orchestration locale (LM Studio + API ComfyUI tierce)
 #  Implemente dans engine.py : llm_chat, generate_t2i, generate_i2i
 # --------------------------------------------------------------------------- #
 from engine import (llm_chat, llm_util_chat, generate_t2i, generate_i2i, generate_group, free_llm,
                     preload_llm, llm_status,
-                    comfy_status, comfy_generation_status, comfy_start, comfy_stop, comfy_restart,
-                    comfy_kill, comfy_free, _comfy_vram, comfy_list_loras,
+                    comfy_status, comfy_generation_status,
+                    comfy_free, _comfy_vram, comfy_list_loras,
                     tts_status, tts_start, tts_stop, tts_restart, tts_kill, tts_speak,
                     whisper_transcribe, whisper_status, VOICE_DIR,
                     _lmstudio_chat, prepare_vram_for_lmstudio,
@@ -5694,9 +5703,8 @@ def api_health():
     except Exception as e:  # noqa: BLE001
         comfy = {"reachable": False, "error": str(e)}
     comfy["ok"] = bool(comfy.get("reachable"))
-    comfy["path_exists"] = os.path.exists(os.path.join(s.get("comfy_path", ""), "main.py")) \
-        if s.get("comfy_path") else False
-    comfy["status"] = "ready" if comfy["ok"] else ("offline" if comfy["path_exists"] else "gray")
+    comfy["external"] = True
+    comfy["status"] = "ready" if comfy["ok"] else "offline"
     # VRAM via ComfyUI /system_stats si dispo
     try:
         comfy["vram"] = _comfy_vram(s)
@@ -6905,15 +6913,6 @@ class Handler(BaseHTTPRequestHandler):
                                                      gender=body.get("gender", ""),
                                                      regen=bool(body.get("regen"))))
 
-            if path == "/api/comfy/start":
-                return self._json(comfy_start(get_settings()))
-            if path == "/api/comfy/stop":
-                comfy_stop()
-                return self._json({"ok": True, "msg": "ComfyUI arrete."})
-            if path == "/api/comfy/restart":
-                return self._json(comfy_restart(get_settings()))
-            if path == "/api/comfy/kill":
-                return self._json(comfy_kill(get_settings()))
             if path == "/api/comfy/free":
                 s = get_settings()
                 vram_before = _comfy_vram(s)
