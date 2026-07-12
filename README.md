@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="./README\_FR.md">Français</a> · <strong>English</strong>
+  <a href="README_FR.md">Français</a> · <strong>English</strong>
 </p>
 
 <p align="center">
@@ -28,7 +28,7 @@
   </a>
 </p>
 
-\---
+---
 
 ## What is AmiorAI?
 
@@ -178,7 +178,7 @@ A simple first session is:
 * [Legal notice](LEGAL_NOTICE.md)
 * [Third-party notices](THIRD_PARTY_NOTICES.md)
 
-\---
+---
 
 # Full installation and configuration
 
@@ -476,7 +476,7 @@ With **Release VRAM between engines** enabled:
 
 CPU TTS is not stopped because it consumes no GPU VRAM.
 
-\---
+---
 
 # Daily use guide
 
@@ -561,7 +561,7 @@ The mobile interface is intended for a trusted private network.
 * do not create router port-forwarding rules for AmiorAI;
 * disable LAN access when it is not needed.
 
-\---
+---
 
 # Data, updates and backups
 
@@ -593,7 +593,7 @@ The source/application folder and the persistent data folder are separate. Remov
 4. Do not copy old Python runtimes over newer ones unless instructed.
 5. Start the new release and run Diagnostics.
 
-\---
+---
 
 # Troubleshooting
 
@@ -658,7 +658,7 @@ Use v40.0.3 or later. In **Settings → Voice / TTS**, enable TTS and save the v
 
 More details: [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md).
 
-\---
+---
 
 # Repository and contribution notes
 
@@ -687,7 +687,7 @@ THIRD\\\\\\\_PARTY\\\\\\\_NOTICES.md   external component licences and sources
 .gitignore               local runtimes, models and personal data exclusions
 ```
 
-\---
+---
 
 # Licence, copyright and responsibility
 
