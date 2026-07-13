@@ -1,6 +1,26 @@
 # AmiorAI — Journal des modifications
 
 
+## v40.1.0 — 13 juillet 2026
+
+### Fournisseurs distants facultatifs et Pods Runpod
+
+- Base de travail : source v40.0.9, sans régression volontaire des créateurs Réaliste, Anime et Cartoon.
+- Choix indépendant du moteur de conversation et du moteur d’image.
+- Ajout de LM Studio local, API compatible OpenAI, Runpod Serverless vLLM et Runpod Pod vLLM.
+- Ajout de ComfyUI local, ComfyUI distant, Runpod Serverless ComfyUI et Runpod Pod ComfyUI.
+- TTS conservé exclusivement en local.
+- Démarrage automatique des Pods personnels au premier appel.
+- Arrêt automatique après 15 minutes d’inactivité par défaut, avec minuteurs LLM et image indépendants.
+- Commandes Start/Stop manuelles et état du Pod dans les réglages.
+- Tentative d’arrêt des Pods configurés lors d’une fermeture normale d’AmiorAI.
+- Clés Runpod et services distants stockées hors de SQLite dans le gestionnaire de secrets du système lorsqu’il est disponible.
+- Routes de gestion cloud réservées au PC hôte, y compris lorsque le mode LAN est actif.
+- Générations distantes sans déchargement inutile des moteurs locaux.
+- Quatre kits de déploiement de référence dans `runpod_templates`.
+- Documentation FR/EN, notice légale et traductions FR/EN/ES/DE mises à jour.
+
+
 ## v40.0.9 — 12 juillet 2026
 
 ### Créateurs visuels Réaliste, Anime et Cartoon

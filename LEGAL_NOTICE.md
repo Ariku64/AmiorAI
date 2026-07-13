@@ -1,6 +1,6 @@
 # AmiorAI — Conditions d’utilisation, avertissement et limitation de responsabilité
 
-**Applicable à partir de la version v40.0.7 — 12 juillet 2026**  
+**Applicable à partir de la version v40.1.0 — 13 juillet 2026**  
 **Projet / mainteneur public : AmiorAI / Ariku**  
 **Copyright © 2026 Ariku — Code source sous licence Apache-2.0**
 
@@ -28,7 +28,7 @@ L’utilisateur doit conserver des sauvegardes indépendantes de ses données im
 
 ### 3. Modèles d’intelligence artificielle et contenus générés
 
-AmiorAI orchestre des logiciels, modèles et fichiers tiers locaux, notamment LM Studio, ComfyUI, des modèles de langage, des modèles d’image, des LoRA et des workflows. Le mainteneur d’AmiorAI ne crée pas nécessairement ces composants et ne contrôle pas leurs sorties.
+AmiorAI orchestre des logiciels, modèles, services et fichiers tiers locaux ou distants, notamment LM Studio, ComfyUI, Runpod, des API compatibles OpenAI, des modèles de langage, des modèles d’image, des LoRA et des workflows. Le mainteneur d’AmiorAI ne crée pas nécessairement ces composants et ne contrôle pas leurs sorties.
 
 L’utilisateur est seul responsable :
 
@@ -60,15 +60,21 @@ L’utilisateur reste responsable :
 
 ### 6. Réseau local et sécurité
 
-AmiorAI est conçu pour un usage local. Si l’utilisateur active l’accès LAN, il doit protéger son réseau, son code d’accès et ses machines. Il ne doit pas exposer directement les ports d’AmiorAI, de LM Studio ou de ComfyUI sur Internet sans protection adaptée.
+AmiorAI est conçu selon une approche local-first. Si l’utilisateur active l’accès LAN, il doit protéger son réseau, son code d’accès et ses machines. Il ne doit pas exposer directement les ports d’AmiorAI, de LM Studio ou de ComfyUI sur Internet sans protection adaptée.
 
 Le mainteneur ne garantit pas qu’un logiciel soit exempt de toute vulnérabilité. L’utilisateur doit maintenir Windows, ses pilotes, LM Studio, ComfyUI et leurs dépendances à jour, et n’installer que des modèles ou extensions provenant de sources qu’il juge fiables.
 
 ### 7. Logiciels et services tiers
 
-LM Studio, ComfyUI, Python, les modèles, LoRA, extensions, bibliothèques et autres composants tiers restent soumis à leurs propres licences, conditions et politiques. AmiorAI n’est pas affilié à leurs éditeurs sauf mention explicite.
+LM Studio, ComfyUI, Runpod, les API compatibles OpenAI, Python, les modèles, LoRA, extensions, bibliothèques et autres composants tiers restent soumis à leurs propres licences, conditions, tarifs et politiques. AmiorAI n’est pas affilié à leurs éditeurs sauf mention explicite.
 
-Le mainteneur n’est pas responsable des modifications, interruptions, incompatibilités, retraits, failles ou conditions imposées par un tiers.
+AmiorAI ne vend aucun crédit, ne loue aucun GPU, ne crée aucun compte fournisseur et ne traite aucun paiement pour ces services. Tout contrat, coût, quota, remboursement, disponibilité ou litige relève exclusivement de l’utilisateur et du fournisseur choisi.
+
+Lorsqu’un moteur distant est activé, l’utilisateur accepte que les données nécessaires au calcul quittent son ordinateur et soient transmises au fournisseur configuré. Cela peut inclure les messages, le contexte et des extraits de mémoire pour un LLM, ou les prompts, workflows, paramètres et images de référence pour une génération d’image. Le mode local est le seul mode où ces données de calcul ne sont pas envoyées à un fournisseur distant.
+
+L’arrêt automatique d’un Pod constitue une tentative de commodité et non une garantie. Un crash, une panne électrique, une coupure réseau, une indisponibilité de l’API ou un arrêt forcé peut empêcher la commande d’arrêt. L’utilisateur doit vérifier lui-même le tableau de bord du fournisseur et reste responsable de tous les coûts de calcul et de stockage.
+
+Le mainteneur n’est pas responsable des modifications, interruptions, incompatibilités, retraits, failles, pertes de données, coûts ou conditions imposées par un tiers.
 
 ### 8. Limitation de responsabilité
 
@@ -94,7 +100,7 @@ Ce document constitue un cadre général de distribution et d’utilisation. Il 
 
 # AmiorAI — Terms of Use, Disclaimer and Limitation of Liability
 
-**Applicable from version v40.0.7 — July 12, 2026**  
+**Applicable from version v40.1.0 — July 13, 2026**  
 **Public project / maintainer name: AmiorAI / Ariku**  
 **Copyright © 2026 Ariku — Source code licensed under Apache-2.0**
 
@@ -112,7 +118,7 @@ Users must maintain independent backups of important data.
 
 ### 3. AI models and generated content
 
-AmiorAI orchestrates local third-party software and files, including LM Studio, ComfyUI, language models, image models, LoRAs and workflows. The maintainer does not necessarily create these components and does not control their outputs.
+AmiorAI orchestrates local or remote third-party software, services and files, including LM Studio, ComfyUI, Runpod, OpenAI-compatible APIs, language models, image models, LoRAs and workflows. The maintainer does not necessarily create these components and does not control their outputs.
 
 The user is solely responsible for supplied prompts and files, third-party licences, generated or published content, privacy, image rights, copyright, trademarks and compliance with applicable law. Users may only import, clone or use voices they own, voices in the public domain, or voices for which they have clear and valid permission. Synthetic voices must not be used for impersonation, deception, harassment, defamation, fraud or to bypass a person's consent.
 
@@ -128,11 +134,19 @@ Local AI workloads may heavily use the CPU, RAM, VRAM, storage and GPU. Driver f
 
 ### 6. Local network and security
 
-AmiorAI is designed for local use. Users enabling LAN access are responsible for their network, access code and computers. Do not expose AmiorAI, LM Studio or ComfyUI ports directly to the public Internet without appropriate protection.
+AmiorAI is designed with a local-first approach. Users enabling LAN access are responsible for their network, access code and computers. Do not expose AmiorAI, LM Studio or ComfyUI ports directly to the public Internet without appropriate protection.
 
-### 7. Third-party software
+### 7. Third-party software and services
 
-LM Studio, ComfyUI, Python, models, LoRAs, extensions and libraries remain subject to their own licences and terms. AmiorAI is not affiliated with their publishers unless explicitly stated.
+LM Studio, ComfyUI, Runpod, OpenAI-compatible APIs, Python, models, LoRAs, extensions and libraries remain subject to their own licences, terms, prices and policies. AmiorAI is not affiliated with their publishers unless explicitly stated.
+
+AmiorAI does not sell credits, rent GPUs, create provider accounts or process payments for these services. Any contract, cost, quota, refund, availability issue or dispute exists solely between the user and the selected provider.
+
+When a remote engine is enabled, the user accepts that data required for computation leaves the computer and is sent to the configured provider. This may include messages, context and selected memory excerpts for a remote LLM, or prompts, workflows, parameters and reference images for remote image generation. Local mode is the only mode in which these computation inputs are not sent to a remote provider.
+
+Automatic Pod stopping is a convenience attempt, not a guarantee. A hard crash, power loss, network outage, provider API failure or forced termination may prevent the Stop request. Users must verify the provider dashboard and remain responsible for all compute and storage charges.
+
+The maintainer is not responsible for third-party changes, outages, incompatibilities, withdrawal, vulnerabilities, data loss, costs or imposed conditions.
 
 ### 8. Limitation of liability
 

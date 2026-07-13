@@ -5,7 +5,7 @@
 <h1 align="center">AmiorAI</h1>
 
 <p align="center">
-  <strong>A free, local AI companion for conversation, roleplay, character memory, image generation and optional voice synthesis.</strong>
+  <strong>A free, local-first AI companion frontend with optional user-owned remote LLM and image providers.</strong>
 </p>
 
 <p align="center">
@@ -19,7 +19,7 @@
 </p>
 
 <p align="center">
-  Current release: <strong>v40.0.9</strong> · Windows 10/11 · Apache-2.0
+  Current release: <strong>v40.1.0</strong> · Windows 10/11 · Apache-2.0
 </p>
 
 <p align="center">
@@ -32,14 +32,14 @@
 
 ## What is AmiorAI?
 
-AmiorAI is a local application for creating AI characters and interacting with them through persistent conversations. It connects to software already running on your computer:
+AmiorAI is a local-first application for creating AI characters and interacting with them through persistent conversations. It can connect either to engines running on your computer or to remote engines configured and paid directly by the user:
 
-* **LM Studio** for the conversation and utility language models;
-* **ComfyUI** for character images, scenes and the Image Studio;
+* **LM Studio**, an OpenAI-compatible API, Runpod Serverless or a user-owned Runpod Pod for conversation and utility models;
+* **local/remote ComfyUI, Runpod Serverless or a user-owned Runpod Pod** for character images, scenes and the Image Studio;
 * **Chatterbox Multilingual V3** for the recommended local voice engine;
 * **Qwen3-TTS 0.6B Base** as an optional experimental voice engine.
 
-The application interface, characters, conversations, memories, images and settings remain stored locally. AmiorAI does not include large AI model weights and does not require a paid cloud service.
+The application interface, characters, conversation database, memories, gallery and settings remain stored locally. Local providers keep prompts on the computer. Remote providers necessarily receive the prompts, context or reference images required for the selected task. AmiorAI does not include large AI model weights and does not require a paid cloud service.
 
 > AmiorAI is a community project shared free of charge. AI models, LoRAs, ComfyUI custom nodes and external applications keep their own licences and requirements.
 
@@ -47,28 +47,28 @@ The application interface, characters, conversations, memories, images and setti
 
 |Feature|Description|
 |-|-|
-|Local conversations|Connects to an OpenAI-compatible LM Studio server.|
+|Flexible conversation engine|Local LM Studio, a generic OpenAI-compatible API, Runpod Serverless vLLM or a user-owned Runpod Pod.|
 |Character creation|Personality, scenario, greeting, physical description, avatar and voice sample.|
 |Share packages|Export/import public character packages with profile, avatar and mood faces, plus portable scenarios.|
 |Persistent memory|Keeps character and conversation information between sessions.|
 |Roleplay display|Distinct rendering for dialogue, narration and expressions.|
-|Image generation|Flux 2 Klein reference-image workflows and the unified Krea 2 workflow.|
+|Flexible image engine|Local/remote ComfyUI, Runpod Serverless ComfyUI or a user-owned Runpod Pod, using the existing Flux 2 Klein and Krea 2 workflows.|
 |LoRA management|Local folders, model classification, previews and character/style LoRA selection.|
 |Image Studio|Manual prompt editing, model selection, sampler controls and generation history.|
-|Local voice|Chatterbox by default, Qwen3-TTS as an optional advanced engine.|
-|VRAM coordination|Can unload TTS, LM Studio and idle ComfyUI models when another engine needs the GPU.|
+|Local voice|Chatterbox by default and Qwen3-TTS as an optional advanced engine; voice remains local in v40.1.0.|
+|VRAM and Pod coordination|Coordinates local VRAM and can start user-owned Runpod Pods on demand, then stop them after 15 inactive minutes by default.|
 |Mobile/LAN interface|Responsive interface for use on a trusted private local network.|
 |Diagnostics|Checks LM Studio, the external ComfyUI API, models, workflows and optional TTS engines.|
 |Multilingual UI|English, French, Spanish and German.|
 
 ## Before downloading
 
-AmiorAI is the application layer. A complete local setup normally requires:
+AmiorAI is the application layer. A complete setup requires:
 
 1. AmiorAI;
-2. LM Studio and at least one compatible chat/instruction model;
-3. ComfyUI and compatible image models if image generation is wanted;
-4. the optional Chatterbox or Qwen TTS installer if voice generation is wanted.
+2. either LM Studio/local models or a user-owned OpenAI-compatible/Runpod LLM endpoint;
+3. either local/remote ComfyUI or a user-owned Runpod image endpoint if image generation is wanted;
+4. the optional local Chatterbox or Qwen TTS installer if voice generation is wanted.
 
 No model weights are bundled in the repository or release archive.
 
@@ -136,7 +136,20 @@ http://127.0.0.1:8188
 
 > AmiorAI does not install, launch, restart or stop ComfyUI. It only communicates with the already running third-party instance through its local HTTP API.
 
-### 6. Install local voice, optional
+
+### 6. Optional remote providers
+
+Small computers can use a user-owned remote engine without buying anything from AmiorAI. Open **Settings** and choose the conversation and image providers independently:
+
+```text
+Conversation: LM Studio / OpenAI-compatible / Runpod Serverless / Runpod Pod
+Images: local ComfyUI / remote ComfyUI / Runpod Serverless / Runpod Pod
+Voice: local only
+```
+
+AmiorAI does not create the provider account, sell credits or receive a commission. Runpod Pods can start on the first request and are stopped after 15 inactive minutes by default. Automatic stopping cannot be guaranteed after a crash, power loss or network outage, so always verify the provider dashboard. See [Remote providers and Runpod](docs/RUNPOD_REMOTE_PROVIDERS.md).
+
+### 7. Install local voice, optional
 
 For the recommended Chatterbox engine, run:
 
@@ -176,6 +189,8 @@ A simple first session is:
 * [French documentation](README_FR.md)
 * [Quick start](docs/QUICKSTART.md)
 * [Detailed troubleshooting](docs/TROUBLESHOOTING.md)
+* [Remote providers and Runpod](docs/RUNPOD_REMOTE_PROVIDERS.md)
+* [Runpod deployment kits](runpod_templates/README.md)
 * [Changelog](docs/CHANGELOG.md)
 * [Legal notice](LEGAL_NOTICE.md)
 * [Third-party notices](THIRD_PARTY_NOTICES.md)
@@ -282,6 +297,23 @@ http://127.0.0.1:8188
 6. Save the section and run **Diagnostics**.
 
 AmiorAI never downloads, installs, starts, restarts, terminates or updates ComfyUI. Process arguments, Python environments and updates remain managed by the external ComfyUI installation.
+
+
+## 4 bis. Configure optional remote providers
+
+The language and image providers are independent. A common private hybrid keeps LM Studio and memory local while using Runpod only for images. Generic providers require an API URL and, when applicable, a service key. Runpod Serverless requires the user's Endpoint ID and Runpod API key. Runpod Pods additionally require the Pod ID and the public proxy URL.
+
+Runpod keys and remote service keys are kept outside the AmiorAI SQLite database in the operating-system credential store when available. Cloud controls are restricted to the host computer and are not exposed to LAN clients.
+
+For Pods, AmiorAI can:
+
+1. check the Pod state;
+2. start it on the first request;
+3. wait for the configured API to become reachable;
+4. execute the task;
+5. stop it after 15 inactive minutes by default.
+
+A hard crash or network failure can prevent the final Stop request. Always verify the Runpod dashboard. Full setup instructions and four reference deployment kits are available in [Remote providers and Runpod](docs/RUNPOD_REMOTE_PROVIDERS.md) and [`runpod_templates`](runpod_templates/README.md).
 
 ## 5. Image models
 

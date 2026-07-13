@@ -6,8 +6,8 @@
 AmiorAI local application server.
 
 Run `python app.py`, then open http://127.0.0.1:8800.
-Text generation is provided exclusively by LM Studio and image generation by ComfyUI.
-User data is stored locally in the AmiorAI data folder.
+Text and image generation can use local engines or optional user-owned remote providers.
+Voice remains local. User data is stored locally in the AmiorAI data folder.
 """
 
 import json
@@ -29,12 +29,15 @@ import model_manifests
 import model_catalog
 import diagnostic as diag_module
 import llm_backends
+import remote_runtime
+import secret_store
 import lmstudio_vram
 import context_manager
 import image_prompt_builder
 import krea_prompt_builder
 
 import base64
+import contextlib
 import hashlib
 import logging
 import math
@@ -81,13 +84,20 @@ _SETTINGS_NEVER_EXPOSE = frozenset({
     "civitai_token", "civitai_api_key",
     "openai_api_key", "anthropic_api_key",
     "llm_util_key", "lmstudio_api_key",
+    "runpod_api_key", "llm_remote_api_key", "image_remote_api_key",
     "api_key", "password", "secret", "token",
 })
 
 # Réglages modifiables uniquement depuis localhost (admin-only)
 _SETTINGS_ADMIN_ONLY = frozenset({
     "lan_mode", "lan_access_code", "lan_access_code_hash",
-    "comfy_url", "lmstudio_url",
+    "comfy_url", "lmstudio_url", "llm_backend", "image_backend",
+    "llm_remote_url", "llm_remote_model", "llm_runpod_endpoint_id",
+    "llm_runpod_pod_id", "llm_runpod_pod_url", "llm_runpod_start_timeout",
+    "image_remote_url", "image_runpod_endpoint_id", "image_runpod_pod_id",
+    "image_runpod_pod_url", "image_runpod_start_timeout",
+    "runpod_auto_stop", "runpod_idle_minutes",
+    "runpod_api_key", "llm_remote_api_key", "image_remote_api_key",
     "civitai_token",
 })
 
@@ -228,6 +238,9 @@ def _get_safe_settings(is_local: bool = True) -> dict:
     out["civitai_token_set"]    = bool(s.get("civitai_token"))
     out["llm_util_key_set"]     = bool(s.get("llm_util_key"))
     out["lmstudio_api_key_set"] = bool(s.get("lmstudio_api_key"))
+    for _name, _status in secret_store.all_status().items():
+        out[_name + "_set"] = bool(_status.get("configured"))
+        out[_name + "_storage"] = _status.get("storage")
     out["lan_mode"]             = s.get("lan_mode", "local")
     out["lan_enabled"]          = s.get("lan_mode", "local") == "lan"
     # Depuis un client LAN : masquer aussi les réglages admin-only
@@ -362,7 +375,7 @@ _LAN_LOGIN_HTML = """<!DOCTYPE html>
 
 
 APP_NAME = "AmiorAI"
-APP_VERSION = "v40.0.9"
+APP_VERSION = "v40.1.0"
 
 # --------------------------------------------------------------------------- #
 #  Chemins et constantes — source unique : app_paths.py
@@ -396,7 +409,13 @@ PORT = 8800
 # Reglages par defaut (modifiables ensuite dans l'onglet Reglages)
 DEFAULT_SETTINGS = {
     # ---- LLM ----
-    "llm_backend": "lmstudio",                  # LM Studio is the only supported LLM backend
+    "llm_backend": "lmstudio",                  # lmstudio / openai_compatible / runpod_serverless / runpod_pod
+    "llm_remote_url": "",                       # generic OpenAI-compatible API base
+    "llm_remote_model": "",                     # model ID exposed by the remote API
+    "llm_runpod_endpoint_id": "",               # Runpod Serverless vLLM endpoint
+    "llm_runpod_pod_id": "",                    # user-owned Runpod Pod ID
+    "llm_runpod_pod_url": "",                   # public/proxy OpenAI-compatible Pod API URL
+    "llm_runpod_start_timeout": "900",           # seconds allowed for Pod + API startup
     "llm_ctx": "8192",                           # taille de contexte
     "llm_temperature": "0.85",
     "llm_max_tokens": "250",                      # longueur des réponses conversationles (slider dans le chat)
@@ -438,8 +457,16 @@ DEFAULT_SETTINGS = {
     "whisper_model_size": "small",                  # tiny / base / small / medium / large-v3
     "whisper_device": "auto",
     "whisper_language": "",                         # vide = detection auto
-    # ---- Image (ComfyUI tiers, connexion API uniquement) ----
-    "comfy_url": "http://127.0.0.1:8188",        # adresse de l'instance ComfyUI lancee separement
+    # ---- Image (local/remote ComfyUI or user-owned Runpod) ----
+    "image_backend": "comfy_local",              # comfy_local / comfy_remote / runpod_serverless / runpod_pod
+    "comfy_url": "http://127.0.0.1:8188",        # local third-party ComfyUI
+    "image_remote_url": "",                      # generic remote ComfyUI-compatible API URL
+    "image_runpod_endpoint_id": "",              # Runpod Serverless ComfyUI endpoint
+    "image_runpod_pod_id": "",                   # user-owned Runpod Pod ID
+    "image_runpod_pod_url": "",                  # public/proxy ComfyUI Pod API URL
+    "image_runpod_start_timeout": "900",          # seconds allowed for Pod + API startup
+    "runpod_auto_stop": "true",                  # stop Pods after the idle countdown
+    "runpod_idle_minutes": "15",                 # reset after every completed LLM/image job
     "t2i_workflow": "t2i.json",
     "i2i_workflow": "i2i.json",
     "duo_workflow": "duo.json",
@@ -545,11 +572,20 @@ _OBSOLETE_COMFY_PROCESS_SETTINGS = frozenset({
 _db_lock = threading.Lock()
 
 
+@contextlib.contextmanager
 def db():
+    """Yield a SQLite connection and always close it after commit/rollback."""
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
-    return conn
+    try:
+        yield conn
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
 
 
 def _backup_db():
@@ -937,42 +973,57 @@ def _add_col(c, table, col, decl):
 def get_settings():
     with db() as c:
         rows = c.execute("SELECT key, value FROM settings").fetchall()
-    s = dict(DEFAULT_SETTINGS)
-    s.update({r["key"]: r["value"] for r in rows})
+    settings = dict(DEFAULT_SETTINGS)
+    settings.update({row["key"]: row["value"] for row in rows})
     for key in _OBSOLETE_COMFY_PROCESS_SETTINGS:
-        s.pop(key, None)
-    # v38.1.2 architecture: LM Studio is the only supported text backend.
-    s["llm_backend"] = "lmstudio"
-    s["llm_util_backend"] = "lmstudio"
-    s["llm_util_url"] = s.get("lmstudio_url") or DEFAULT_SETTINGS["lmstudio_url"]
-    s["llm_util_key"] = s.get("lmstudio_api_key") or ""
-    if (s.get("image_family") or "").strip() not in ("flux2_klein", "krea2"):
-        s["image_family"] = "flux2_klein"
-    return s
+        settings.pop(key, None)
+    llm_backend = (settings.get("llm_backend") or "lmstudio").strip()
+    settings["llm_backend"] = llm_backend if llm_backend in (
+        "lmstudio", "openai_compatible", "runpod_serverless", "runpod_pod") else "lmstudio"
+    image_backend = (settings.get("image_backend") or "comfy_local").strip()
+    settings["image_backend"] = image_backend if image_backend in (
+        "comfy_local", "comfy_remote", "runpod_serverless", "runpod_pod") else "comfy_local"
+    # The utility route deliberately shares the selected provider and credentials.
+    settings["llm_util_backend"] = settings["llm_backend"]
+    settings["llm_util_url"] = (settings.get("lmstudio_url") if settings["llm_backend"] == "lmstudio"
+                                else settings.get("llm_remote_url")) or ""
+    settings["llm_util_key"] = ""
+    if (settings.get("image_family") or "").strip() not in ("flux2_klein", "krea2"):
+        settings["image_family"] = "flux2_klein"
+    return settings
 
-
-def save_settings(d):
-    clean = dict(d or {})
+def save_settings(data):
+    clean = dict(data or {})
     for key in _OBSOLETE_COMFY_PROCESS_SETTINGS:
         clean.pop(key, None)
-    # Ignore legacy backend values from an older UI or database.
-    clean["llm_backend"] = "lmstudio"
-    clean["llm_util_backend"] = "lmstudio"
-    if "lmstudio_url" in clean:
-        clean["llm_util_url"] = clean.get("lmstudio_url") or DEFAULT_SETTINGS["lmstudio_url"]
-    if "lmstudio_api_key" in clean:
-        clean["llm_util_key"] = clean.get("lmstudio_api_key") or ""
+    # Provider credentials are saved only through /api/cloud/secrets.
+    for key in ("runpod_api_key", "llm_remote_api_key", "image_remote_api_key"):
+        clean.pop(key, None)
+    if "llm_backend" in clean:
+        backend = (clean.get("llm_backend") or "lmstudio").strip()
+        clean["llm_backend"] = backend if backend in (
+            "lmstudio", "openai_compatible", "runpod_serverless", "runpod_pod") else "lmstudio"
+    clean["llm_util_backend"] = clean.get("llm_backend", get_settings().get("llm_backend", "lmstudio"))
+    clean.pop("llm_util_key", None)
+    clean.pop("llm_util_url", None)
+    if "image_backend" in clean:
+        backend = (clean.get("image_backend") or "comfy_local").strip()
+        clean["image_backend"] = backend if backend in (
+            "comfy_local", "comfy_remote", "runpod_serverless", "runpod_pod") else "comfy_local"
     if "image_family" in clean:
         family = (clean.get("image_family") or "").strip()
         clean["image_family"] = family if family in ("flux2_klein", "krea2") else "flux2_klein"
     if "tts_engine" in clean:
-        engine = (clean.get("tts_engine") or "").strip().lower()
-        clean["tts_engine"] = engine if engine in ("chatterbox", "qwen") else "chatterbox"
+        selected = (clean.get("tts_engine") or "").strip().lower()
+        clean["tts_engine"] = selected if selected in ("chatterbox", "qwen") else "chatterbox"
     for key, default, minimum, maximum in (
         ("tts_speed", 1.0, 0.75, 1.25),
         ("tts_exaggeration", 0.5, 0.25, 2.0),
         ("tts_cfg_weight", 0.5, 0.0, 1.0),
         ("tts_temperature", 0.8, 0.05, 2.0),
+        ("runpod_idle_minutes", 15.0, 1.0, 120.0),
+        ("llm_runpod_start_timeout", 900.0, 30.0, 3600.0),
+        ("image_runpod_start_timeout", 900.0, 30.0, 3600.0),
     ):
         if key in clean:
             try:
@@ -983,13 +1034,12 @@ def save_settings(d):
                 value = default
             clean[key] = str(max(minimum, min(maximum, value)))
     with db() as c:
-        for k, v in clean.items():
+        for key, value in clean.items():
             c.execute(
                 "INSERT INTO settings(key, value) VALUES (?, ?) "
                 "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
-                (k, str(v)),
+                (key, str(value)),
             )
-
 
 def new_id():
     return uuid.uuid4().hex[:12]
@@ -5923,92 +5973,74 @@ def api_image_set_component(family_id, kind_or_setting, value):
 # --------------------------------------------------------------------------- #
 def api_llm_backends_list():
     settings = get_settings()
-    backend = llm_backends.list_backends()[0]
-    return [{**backend, "status": llm_backends.probe_lmstudio(settings)}]
+    selected = settings.get("llm_backend", "lmstudio")
+    result = []
+    for backend in llm_backends.list_backends():
+        item = dict(backend)
+        item["selected"] = backend["id"] == selected
+        item["status"] = (llm_backends.probe_backend(backend["id"], settings)
+                          if item["selected"] else {"backend": backend["id"], "reachable": None})
+        result.append(item)
+    return result
 
-
-def api_llm_backend_status(backend_id="lmstudio"):
-    return llm_backends.probe_lmstudio(get_settings())
-
+def api_llm_backend_status(backend_id=None):
+    settings = get_settings()
+    return llm_backends.probe_backend(backend_id or settings.get("llm_backend", "lmstudio"), settings)
 
 def api_llm_catalog():
-    """Return models exposed by LM Studio. Local GGUF discovery is intentionally disabled."""
+    """Return model IDs exposed by the currently selected OpenAI-compatible provider."""
     settings = get_settings()
-    probe = llm_backends.probe_lmstudio(settings)
+    backend = settings.get("llm_backend", "lmstudio")
+    probe = llm_backends.probe_backend(backend, settings)
+    configured = ((settings.get("lmstudio_model") if backend == "lmstudio"
+                   else settings.get("llm_remote_model")) or "").strip()
     entries = []
-    configured = (settings.get("lmstudio_model") or "").strip()
     for item in probe.get("models", []):
         model_id = item.get("id") if isinstance(item, dict) else str(item)
-        if not model_id:
-            continue
-        entries.append({
-            "name": model_id,
-            "id": model_id,
-            "format": "lmstudio",
-            "valid": True,
-            "compatible_backends": ["lmstudio"],
-            "backend_compatible": True,
-            "status": "ready",
-            "is_configured": model_id == configured,
-        })
-    return {
-        "entries": entries,
-        "current_backend": "lmstudio",
-        "reachable": bool(probe.get("reachable")),
-        "error": probe.get("error"),
-    }
-
+        if model_id:
+            entries.append({"name": model_id, "id": model_id, "format": "openai-compatible",
+                            "valid": True, "compatible_backends": [backend],
+                            "backend_compatible": True, "status": "ready",
+                            "is_configured": model_id == configured})
+    return {"entries": entries, "current_backend": backend,
+            "reachable": bool(probe.get("reachable")), "error": probe.get("error")}
 
 def api_llm_validate_path(path):
-    """Legacy endpoint kept for old clients; AmiorAI no longer loads local model files."""
-    return {
-        "valid": False,
-        "backend": "lmstudio",
-        "error": "Local LLM file loading was removed. Load the model in LM Studio instead.",
-    }
+    return {"valid": False, "backend": get_settings().get("llm_backend", "lmstudio"),
+            "error": "AmiorAI connects to a running local or user-owned remote API; it does not load a model file directly."}
 
 def api_llm_util_status():
-    """Status of the optional utility model on the same LM Studio server."""
     settings = get_settings()
     enabled = str(settings.get("llm_util_enabled", "false")).lower() in ("true", "1", "yes")
-    probe = llm_backends.probe_lmstudio(settings)
-    model = (settings.get("llm_util_model") or settings.get("lmstudio_model") or "").strip()
-    model_ids = [m.get("id") for m in probe.get("models", []) if isinstance(m, dict) and m.get("id")]
-    return {
-        "enabled": enabled,
-        "url": settings.get("lmstudio_url"),
-        "model": model,
-        "reachable": bool(probe.get("reachable")),
-        "models": model_ids,
-        "error": None if enabled and probe.get("reachable") else (
-            "Utility model disabled." if not enabled else probe.get("error")
-        ),
-    }
-
+    backend = settings.get("llm_backend", "lmstudio")
+    probe = llm_backends.probe_backend(backend, settings)
+    main_model = settings.get("lmstudio_model") if backend == "lmstudio" else settings.get("llm_remote_model")
+    model = (settings.get("llm_util_model") or main_model or "").strip()
+    model_ids = [item.get("id") for item in probe.get("models", [])
+                 if isinstance(item, dict) and item.get("id")]
+    return {"enabled": enabled, "backend": backend, "url": probe.get("url"), "model": model,
+            "reachable": bool(probe.get("reachable")), "models": model_ids,
+            "error": None if enabled and probe.get("reachable") else
+                     ("Utility model disabled." if not enabled else probe.get("error"))}
 
 def api_llm_util_test():
     settings = get_settings()
     enabled = str(settings.get("llm_util_enabled", "false")).lower() in ("true", "1", "yes")
-    model = (settings.get("llm_util_model") or settings.get("lmstudio_model") or "").strip()
-    url = settings.get("lmstudio_url")
+    backend = settings.get("llm_backend", "lmstudio")
+    main_model = settings.get("lmstudio_model") if backend == "lmstudio" else settings.get("llm_remote_model")
+    model = (settings.get("llm_util_model") or main_model or "").strip()
     if not enabled:
         return {"ok": False, "error": "Utility model disabled in Settings.",
-                "route": "utility", "url": url, "model": model, "duration_s": 0}
-    t0 = time.time()
+                "route": "utility", "model": model, "duration_s": 0}
+    started = time.time()
     try:
-        with lmstudio_vram.vram_lock_for_text("utility"):
-            prepare_vram_for_lmstudio(settings, "utility")
-            lmstudio_vram.ensure_loaded(settings, "utility")
-            reply = _lmstudio_chat(
-                [{"role": "user", "content": "Reply only with: UTIL_OK"}],
-                settings, max_tokens=96, temp=0.1, stop=None, role="utility")
-        dur = round(time.time() - t0, 2)
-        return {"ok": True, "reply": reply, "duration_s": dur,
-                "route": "utility", "url": url, "model": model}
-    except Exception as e:  # noqa: BLE001
-        return {"ok": False, "error": str(e), "duration_s": round(time.time() - t0, 2),
-                "route": "utility", "url": url, "model": model}
-
+        reply = llm_util_chat([{"role": "user", "content": "Reply only with: UTIL_OK"}],
+                              settings, max_tokens=96, temperature=0.1)
+        return {"ok": True, "reply": reply, "duration_s": round(time.time()-started, 2),
+                "route": "utility", "backend": backend, "model": model}
+    except Exception as exc:
+        return {"ok": False, "error": str(exc), "duration_s": round(time.time()-started, 2),
+                "route": "utility", "backend": backend, "model": model}
 
 def api_lmstudio_vram_status():
     """Etat actuel des modeles AmiorAI dans LM Studio (charges ou non), pour affichage dans
@@ -6376,6 +6408,58 @@ def api_group_image(chat_id, message_id, with_persona=False, prompt=None, dry_ru
 # --------------------------------------------------------------------------- #
 #  Serveur HTTP
 # --------------------------------------------------------------------------- #
+def _cloud_pod_config(role, settings=None):
+    settings = settings or get_settings()
+    if role == "llm":
+        base = remote_runtime.normalize_openai_base(settings.get("llm_runpod_pod_url"))
+        return {"role": role, "pod_id": settings.get("llm_runpod_pod_id") or "",
+                "health_url": base + "/models" if base else "",
+                "service_key": secret_store.get_secret("llm_remote_api_key"),
+                "timeout": float(settings.get("llm_runpod_start_timeout") or 900)}
+    if role == "image":
+        base = (settings.get("image_runpod_pod_url") or "").strip().rstrip("/")
+        return {"role": role, "pod_id": settings.get("image_runpod_pod_id") or "",
+                "health_url": base + "/system_stats" if base else "",
+                "service_key": secret_store.get_secret("image_remote_api_key"),
+                "timeout": float(settings.get("image_runpod_start_timeout") or 900)}
+    raise RuntimeError("Unknown Pod role. Use 'llm' or 'image'.")
+
+
+def api_cloud_pod_status(role):
+    settings = get_settings(); config = _cloud_pod_config(role, settings)
+    result = {"ok": True, "role": role, "configured": bool(config["pod_id"]),
+              "manager": remote_runtime.POD_MANAGER.status(role), "provider_status": None,
+              "error": None}
+    key = secret_store.get_secret("runpod_api_key")
+    if config["pod_id"] and key:
+        try:
+            info = remote_runtime.runpod_pod_info(config["pod_id"], key)
+            result["provider_status"] = remote_runtime.runpod_pod_status(info)
+        except Exception as exc:
+            result["error"] = str(exc)
+    return result
+
+
+def api_cloud_pod_action(role, action):
+    settings = get_settings(); config = _cloud_pod_config(role, settings)
+    account_key = secret_store.get_secret("runpod_api_key")
+    idle_seconds = max(60, int(float(settings.get("runpod_idle_minutes") or 15) * 60))
+    auto_stop = str(settings.get("runpod_auto_stop", "true")).lower() in ("1", "true", "yes", "on")
+    remote_runtime.POD_MANAGER.configure(role, config["pod_id"], account_key, idle_seconds, auto_stop)
+    if action == "start":
+        info = remote_runtime.ensure_runpod_pod(role, config["pod_id"], account_key,
+            config["health_url"], config["service_key"], config["timeout"], idle_seconds, auto_stop)
+        remote_runtime.POD_MANAGER.end(role)
+        return {"ok": True, "role": role, "action": action,
+                "provider_status": remote_runtime.runpod_pod_status(info),
+                "manager": remote_runtime.POD_MANAGER.status(role)}
+    if action == "stop":
+        response = remote_runtime.runpod_pod_action(config["pod_id"], account_key, "stop")
+        remote_runtime.POD_MANAGER.set_action(role, "stopped manually")
+        return {"ok": True, "role": role, "action": action, "response": response,
+                "manager": remote_runtime.POD_MANAGER.status(role)}
+    raise RuntimeError("Unsupported Pod action.")
+
 class Handler(BaseHTTPRequestHandler):
     server_version = "Companion/1.0"
 
@@ -6782,6 +6866,12 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(api_llm_util_status())
             if path == "/api/llm/lmstudio_vram_status":
                 return self._json(api_lmstudio_vram_status())
+            if path == "/api/cloud/secrets/status":
+                if not _lan_is_local(client_ip): return _lan_host_only_response(self)
+                return self._json(secret_store.all_status())
+            if path == "/api/cloud/pod/status":
+                if not _lan_is_local(client_ip): return _lan_host_only_response(self)
+                return self._json(api_cloud_pod_status((qs.get("role") or ["llm"])[0]))
 
             self.send_response(404)
             self.end_headers()
@@ -6877,8 +6967,27 @@ class Handler(BaseHTTPRequestHandler):
                             "error": "This action must be performed from the host PC.",
                             "blocked_keys": blocked
                         })
+                for secret_name in ("runpod_api_key", "llm_remote_api_key", "image_remote_api_key"):
+                    value = str(body.pop(secret_name, "") or "").strip()
+                    if value:
+                        secret_store.save_secret(secret_name, value)
                 save_settings(body)
-                return self._json({"ok": True})
+                return self._json({"ok": True, "secrets": secret_store.all_status()})
+
+            if path == "/api/cloud/secrets":
+                if not _lan_is_local(client_ip): return _lan_host_only_response(self)
+                name = body.get("name"); storage = secret_store.save_secret(name, body.get("value"))
+                return self._json({"ok": True, "name": name, "storage": storage,
+                                   "status": secret_store.secret_status(name)})
+            if path == "/api/cloud/secrets/delete":
+                if not _lan_is_local(client_ip): return _lan_host_only_response(self)
+                name = body.get("name"); secret_store.delete_secret(name)
+                return self._json({"ok": True, "name": name,
+                                   "status": secret_store.secret_status(name)})
+            if path in ("/api/cloud/pod/start", "/api/cloud/pod/stop"):
+                if not _lan_is_local(client_ip): return _lan_host_only_response(self)
+                action = "start" if path.endswith("/start") else "stop"
+                return self._json(api_cloud_pod_action(body.get("role", "llm"), action))
 
             # ── Routes i18n ──────────────────────────────────────────────────
             if path == "/api/settings/lang":
@@ -7291,20 +7400,22 @@ class Handler(BaseHTTPRequestHandler):
             if path == "/api/llm/load":
                 settings = get_settings()
                 try:
-                    with lmstudio_vram.vram_lock_for_text("conversation"):
-                        prepare_vram_for_lmstudio(settings, "conversation")
-                        lmstudio_vram.ensure_loaded(settings, "conversation")
-                    return self._json({"ok": True, "status": api_llm_backend_status("lmstudio")})
-                except Exception as e:  # noqa: BLE001
-                    return self._json({"ok": False, "error": str(e)})
+                    result = preload_llm(settings)
+                    return self._json({"ok": True, "result": result,
+                                       "status": api_llm_backend_status(settings.get("llm_backend"))})
+                except Exception as exc:
+                    return self._json({"ok": False, "error": str(exc)})
             if path == "/api/llm/unload":
-                result = api_lmstudio_vram_unload_now()
-                return self._json(result)
+                settings = get_settings()
+                if settings.get("llm_backend") == "lmstudio":
+                    return self._json(api_lmstudio_vram_unload_now())
+                return self._json({"ok": True, "message": "Remote engines are controlled by their owner; use Pod Stop for a Runpod Pod."})
             if path == "/api/llm/validate_path":
                 return self._json(api_llm_validate_path(body.get("path")))
             if path == "/api/llm/set_backend":
-                save_settings({"llm_backend": "lmstudio"})
-                return self._json({"ok": True, "backend": "lmstudio"})
+                backend = body.get("backend", "lmstudio")
+                save_settings({"llm_backend": backend})
+                return self._json({"ok": True, "backend": get_settings().get("llm_backend")})
             if path == "/api/llm/test":
                 # Test simple : un message court, mesure de la duree, pas de modification d'etat
                 settings = get_settings()
@@ -7476,11 +7587,12 @@ def start_server():
     print(f"  Open: http://127.0.0.1:{PORT}\n")
     if lan_note:
         print(lan_note)
-    llm = s.get("lmstudio_model") or "(auto / loaded model)"
-    img = s.get("image_model_path") or "(non configure)"
-    print(f"  LM Studio model: {llm}")
-    print(f"  Image model: {img}")
-    print("  Configure LM Studio and ComfyUI in Settings.")
+    llm = s.get("llm_backend", "lmstudio")
+    image = s.get("image_backend", "comfy_local")
+    print(f"  Text provider: {llm}")
+    print(f"  Image provider: {image}")
+    print("  Voice provider: local TTS")
+    print("  Configure local or user-owned remote engines in Settings.")
     print("  Models may load on first use; this can take a moment.")
     print(f"  Full log: {_log_path}\n")
     return ThreadingHTTPServer((HOST, PORT), Handler)
@@ -7494,7 +7606,13 @@ def main():
     except KeyboardInterrupt:
         print("\n  Arret.")
         log.info(f"{APP_NAME} arrete (KeyboardInterrupt).")
+    finally:
+        try:
+            remote_runtime.POD_MANAGER.stop_configured_pods("AmiorAI shutdown")
+        except Exception as exc:
+            log.warning("[Runpod] shutdown cleanup failed: %s", exc)
         server.shutdown()
+        server.server_close()
 
 
 if __name__ == "__main__":

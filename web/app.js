@@ -2664,6 +2664,8 @@ async function renderGallery(characterId) {
 //  SETTINGS
 // --------------------------------------------------------------------------- //
 const SF = ["llm_backend", "lmstudio_url", "lmstudio_model", "lmstudio_api_key",
+            "llm_remote_url", "llm_remote_model", "llm_runpod_endpoint_id",
+            "llm_runpod_pod_id", "llm_runpod_pod_url", "llm_runpod_start_timeout",
             "lmstudio_native_timeout", "lmstudio_request_timeout", "lmstudio_load_wait_timeout",
             "lmstudio_post_load_delay", "lmstudio_post_unload_delay",
             "comfy_vram_release_timeout", "comfy_busy_wait_timeout",
@@ -2672,19 +2674,24 @@ const SF = ["llm_backend", "lmstudio_url", "lmstudio_model", "lmstudio_api_key",
             "tts_vram_offload_enabled", "tts_language", "tts_speed", "tts_exaggeration", "tts_cfg_weight",
             "tts_temperature", "tts_autoplay",
             "whisper_enabled", "whisper_model_size", "whisper_device", "whisper_language",
-            "comfy_url",
-            "image_resolution",
+            "image_backend", "comfy_url", "image_remote_url", "image_runpod_endpoint_id",
+            "image_runpod_pod_id", "image_runpod_pod_url", "image_runpod_start_timeout",
+            "runpod_idle_minutes", "image_resolution",
             "persona_name", "persona_description", "krea2_user_token", "krea2_char2_lora", "krea2_char2_lora_strength", "default_negative", "vram_mode"]
 
 let personaImage = "";
 
 async function refreshLMStudioModelLists(settings = null) {
-  const mainSel = $("#s-lmstudio_model");
+  const backend = settings ? (settings.llm_backend || "lmstudio") : (($("#s-llm_backend") || {}).value || "lmstudio");
+  const localSel = $("#s-lmstudio_model");
+  const remoteSels = [$("#s-llm_remote_model"), $("#s-llm_remote_model-serverless"), $("#s-llm_remote_model-pod")].filter(Boolean);
   const utilSel = $("#s-llm_util_model");
   const status = $("#lmstudio-model-list-status");
-  const currentMain = settings ? (settings.lmstudio_model || "") : (mainSel?.value || "");
+  const currentMain = settings
+    ? (backend === "lmstudio" ? (settings.lmstudio_model || "") : (settings.llm_remote_model || ""))
+    : (backend === "lmstudio" ? (localSel?.value || "") : (remoteSels.find(x => x.offsetParent !== null)?.value || remoteSels[0]?.value || ""));
   const currentUtil = settings ? (settings.llm_util_model || "") : (utilSel?.value || "");
-  if (status) status.textContent = "Reading models from LM Studio…";
+  if (status) status.textContent = window.t("settings.models_reading", { provider: providerLabel(backend) });
   try {
     const res = await api("/api/llm/catalog");
     const ids = (res.entries || []).map(x => x.id || x.name).filter(Boolean);
@@ -2693,18 +2700,28 @@ async function refreshLMStudioModelLists(settings = null) {
       sel.innerHTML = "";
       sel.append(el("option", { value: "" }, firstLabel));
       for (const id of ids) sel.append(el("option", { value: id }, id));
-      if (current && !ids.includes(current)) {
-        sel.append(el("option", { value: current }, `${current} (not currently exposed)`));
-      }
+      if (current && !ids.includes(current)) sel.append(el("option", { value: current }, window.t("settings.model_not_exposed", { model: current })));
       sel.value = current;
     };
-    fill(mainSel, "— auto / only loaded model —", currentMain);
-    fill(utilSel, "— reuse conversation model —", currentUtil);
+    fill(localSel, window.t("settings.model_auto_placeholder"), backend === "lmstudio" ? currentMain : (settings?.lmstudio_model || localSel?.value || ""));
+    for (const remoteSel of remoteSels) fill(remoteSel, window.t("settings.model_detect_placeholder"), backend === "lmstudio" ? (settings?.llm_remote_model || remoteSel.value || "") : currentMain);
+    fill(utilSel, window.t("settings.util_reuse_placeholder"), currentUtil);
     if (status) status.textContent = res.reachable
-      ? `${ids.length} model(s) exposed by LM Studio /v1/models.`
-      : (res.error || "LM Studio is unavailable.");
+      ? window.t("settings.models_exposed", { count: ids.length, provider: providerLabel(res.current_backend || backend) })
+      : (res.error || window.t("settings.provider_unavailable", { provider: providerLabel(backend) }));
   } catch (e) {
     if (status) status.textContent = e.message;
+  }
+}
+
+function providerLabel(id) {
+  return ({lmstudio:"LM Studio", openai_compatible:"OpenAI-compatible API",
+           runpod_serverless:"Runpod Serverless", runpod_pod:"Runpod Pod"})[id] || id;
+}
+
+function syncRemoteModel(value) {
+  for (const id of ["s-llm_remote_model", "s-llm_remote_model-serverless", "s-llm_remote_model-pod"]) {
+    const node = $("#" + id); if (node && node.value !== value) node.value = value;
   }
 }
 
@@ -2732,43 +2749,54 @@ async function refreshPersonaKreaLoraSelect(settings = null) {
 }
 
 async function loadSettings() {
-  let s;
-  try { s = await api("/api/settings"); }
+  let settings;
+  try { settings = await api("/api/settings"); }
   catch (e) { return toast(e.message, true); }
-  for (const k of SF) { const n = $("#s-" + k); if (n) n.value = s[k] || ""; }
-  await refreshLMStudioModelLists(s);
-  const utilFallbackCb = $("#s-llm_util_fallback");
-  if (utilFallbackCb) utilFallbackCb.checked = String(s.llm_util_fallback) === "true";
-  const vramOffloadCb = $("#s-lmstudio_vram_offload_enabled");
-  if (vramOffloadCb) vramOffloadCb.checked = String(s.lmstudio_vram_offload_enabled) !== "false";
-  const vramReloadCb = $("#s-lmstudio_reload_on_demand");
-  if (vramReloadCb) vramReloadCb.checked = String(s.lmstudio_reload_on_demand) !== "false";
-  const comfyOffloadCb = $("#s-comfy_vram_offload_before_lmstudio");
-  if (comfyOffloadCb) comfyOffloadCb.checked = String(s.comfy_vram_offload_before_lmstudio) !== "false";
-  const unloadConvCb = $("#s-lmstudio_unload_conversation_before_utility");
-  if (unloadConvCb) unloadConvCb.checked = String(s.lmstudio_unload_conversation_before_utility) !== "false";
-  const unloadUtilCb = $("#s-lmstudio_unload_utility_after_use");
-  if (unloadUtilCb) unloadUtilCb.checked = String(s.lmstudio_unload_utility_after_use) !== "false";
-  const retryLmCb = $("#s-lmstudio_retry_after_load_error");
-  if (retryLmCb) retryLmCb.checked = String(s.lmstudio_retry_after_load_error) !== "false";
-  currentMaxTokens = parseInt(s.llm_max_tokens, 10) || 250;
-  const ctxSlider = $("#s-llm_ctx_slider");
-  if (ctxSlider) {
-    ctxSlider.value = String(parseInt(s.llm_ctx, 10) || 8192);
-    refreshContextBudgetPreview();
+  for (const key of SF) { const node = $("#s-" + key); if (node) node.value = settings[key] || ""; }
+  syncRemoteModel(settings.llm_remote_model || "");
+  await refreshLMStudioModelLists(settings);
+  const checks = {
+    "s-llm_util_fallback": String(settings.llm_util_fallback) === "true",
+    "s-lmstudio_vram_offload_enabled": String(settings.lmstudio_vram_offload_enabled) !== "false",
+    "s-lmstudio_reload_on_demand": String(settings.lmstudio_reload_on_demand) !== "false",
+    "s-comfy_vram_offload_before_lmstudio": String(settings.comfy_vram_offload_before_lmstudio) !== "false",
+    "s-lmstudio_unload_conversation_before_utility": String(settings.lmstudio_unload_conversation_before_utility) !== "false",
+    "s-lmstudio_unload_utility_after_use": String(settings.lmstudio_unload_utility_after_use) !== "false",
+    "s-lmstudio_retry_after_load_error": String(settings.lmstudio_retry_after_load_error) !== "false",
+    "s-runpod_auto_stop": String(settings.runpod_auto_stop) !== "false",
+  };
+  for (const [id, checked] of Object.entries(checks)) { const node = $("#" + id); if (node) node.checked = checked; }
+  for (const [id, flag, labelKey] of [
+    ["runpod-key-status", "runpod_api_key_set", "settings.key_runpod_label"],
+    ["llm-remote-key-status", "llm_remote_api_key_set", "settings.key_llm_label"],
+    ["image-remote-key-status", "image_remote_api_key_set", "settings.key_image_label"],
+  ]) {
+    const node = $("#" + id);
+    if (node) {
+      const label = window.t(labelKey);
+      const storage = settings[flag.replace("_set", "_storage")] || window.t("settings.secure_storage");
+      node.textContent = settings[flag]
+        ? window.t("settings.key_saved", { label, storage })
+        : window.t("settings.key_not_configured", { label });
+    }
   }
-  personaImage = s.persona_image || "";
-  await refreshPersonaKreaLoraSelect(s);
+  currentMaxTokens = parseInt(settings.llm_max_tokens, 10) || 250;
+  const ctxSlider = $("#s-llm_ctx_slider");
+  if (ctxSlider) { ctxSlider.value = String(parseInt(settings.llm_ctx, 10) || 8192); refreshContextBudgetPreview(); }
+  personaImage = settings.persona_image || "";
+  await refreshPersonaKreaLoraSelect(settings);
   renderPersonaPreview();
   toggleLLMBackendFields();
-  whisperEnabled = String(s.whisper_enabled) === "true";
-  ttsEnabled = String(s.tts_enabled) === "true";
-  ttsAutoplay = String(s.tts_autoplay) !== "false";
+  toggleImageBackendFields();
+  whisperEnabled = String(settings.whisper_enabled) === "true";
+  ttsEnabled = String(settings.tts_enabled) === "true";
+  ttsAutoplay = String(settings.tts_autoplay) !== "false";
   updateTTSEngineUI();
   refreshTTSStatusLine();
   refreshLLMUtilStatus();
   refreshLMStudioVRAMStatus();
-  loadFlux2ModeSection(s);
+  refreshPodStatus("llm"); refreshPodStatus("image");
+  loadFlux2ModeSection(settings);
 }
 
 
@@ -2890,109 +2918,34 @@ if (_ttsKillBtn) _ttsKillBtn.addEventListener("click", async () => {
 });
 
 function toggleLLMBackendFields() {
-  const lm = $("#llm-lmstudio-fields");
-  if (lm) lm.style.display = "block";
+  const backend = (($("#s-llm_backend") || {}).value || "lmstudio");
+  const map = {
+    "llm-lmstudio-fields": backend === "lmstudio",
+    "llm-openai-fields": backend === "openai_compatible",
+    "llm-serverless-fields": backend === "runpod_serverless",
+    "llm-pod-fields": backend === "runpod_pod",
+  };
+  for (const [id, visible] of Object.entries(map)) { const node = $("#" + id); if (node) node.style.display = visible ? "block" : "none"; }
+  const unload = $("#llm-unload-btn"); if (unload) unload.style.display = backend === "lmstudio" ? "" : "none";
+  const vram = $("#lmstudio-vram-status"); if (vram) vram.style.display = backend === "lmstudio" ? "" : "none";
   refreshLLMBackendStatus();
-  updateContextBackendNote("lmstudio");
-}
-
-// --------------------------------------------------------------------------- //
-//  Contexte maximal (slider indépendant du backend) — miroir JS de
-//  context_manager.get_context_distribution() pour un aperçu local instantané,
-//  sans aller-retour serveur a chaque deplacement du slider.
-// --------------------------------------------------------------------------- //
-function clientClamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
-
-function clientContextDistribution(contextLimit, responseMaxTokens) {
-  contextLimit = clientClamp(contextLimit, 2048, 32768);
-  responseMaxTokens = clientClamp(responseMaxTokens, 50, 600);
-  const safetyMargin = 384;
-  const hardInputLimit = Math.max(768, contextLimit - responseMaxTokens - safetyMargin);
-  let inputBudget = Math.min(hardInputLimit, Math.round(contextLimit * 0.75));
-  inputBudget = Math.max(768, inputBudget);
-
-  let memoryBudget, summaryBudget, recentMessages;
-  if (inputBudget >= 4500) {
-    memoryBudget = clientClamp(Math.round(inputBudget * 0.20), 700, 1400);
-    summaryBudget = clientClamp(Math.round(inputBudget * 0.20), 900, 1500);
-    recentMessages = clientClamp(Math.round(inputBudget / 500), 8, 14);
-  } else if (inputBudget >= 2500) {
-    memoryBudget = clientClamp(Math.round(inputBudget * 0.17), 400, 900);
-    summaryBudget = clientClamp(Math.round(inputBudget * 0.17), 500, 1000);
-    recentMessages = clientClamp(Math.round(inputBudget / 575), 6, 10);
-  } else {
-    memoryBudget = clientClamp(Math.round(inputBudget * 0.15), 250, 500);
-    summaryBudget = clientClamp(Math.round(inputBudget * 0.15), 300, 600);
-    recentMessages = clientClamp(Math.round(inputBudget / 650), 4, 7);
-  }
-  return { contextLimit, responseMaxTokens, safetyMargin, inputBudget, memoryBudget, summaryBudget, recentMessages };
-}
-
-function updateContextBackendNote() {
-  const note = $("#llm-context-backend-note");
-  if (!note) return;
-  note.textContent = "AmiorAI uses this value to build prompts below the real context configured for the selected LM Studio model.";
-}
-
-function refreshContextBudgetPreview() {
-  const slider = $("#s-llm_ctx_slider");
-  const valueEl = $("#s-llm_ctx_value");
-  const preview = $("#llm-context-budget-preview");
-  if (!slider || !valueEl || !preview) return;
-  const ctx = parseInt(slider.value, 10);
-  valueEl.textContent = `${ctx} tokens`;
-  const dist = clientContextDistribution(ctx, currentMaxTokens);
-  preview.textContent = `Memory ~${dist.memoryBudget} · Summary ~${dist.summaryBudget} · ${dist.recentMessages} recent messages`;
-}
-
-const _llmCtxSlider = $("#s-llm_ctx_slider");
-if (_llmCtxSlider) _llmCtxSlider.addEventListener("input", refreshContextBudgetPreview);
-
-const _llmContextSaveBtn = $("#llm-context-save-btn");
-if (_llmContextSaveBtn) _llmContextSaveBtn.addEventListener("click", async () => {
-  const slider = $("#s-llm_ctx_slider");
-  const status = $("#llm-context-status");
-  const value = parseInt(slider.value, 10);
-  _llmContextSaveBtn.disabled = true;
-  try {
-    // Reutilise /api/settings existant, sauvegarde uniquement llm_ctx. Le recalcul
-    // memoire/resume/messages recents se fait cote serveur au prochain message (mode
-    // "auto" de get_context_distribution) : pas besoin de forcer quoi que ce soit ici.
-    await api("/api/settings", "POST", { llm_ctx: String(value) });
-    status.textContent = window.t("settings.context_saved");
-    const panel = _llmContextSaveBtn.closest(".panel");
-    const sectionStatus = panel ? panel.querySelector(".settings-section-status") : null;
-    const sectionButton = panel ? panel.querySelector(".settings-section-save") : null;
-    if (sectionStatus) {
-      sectionStatus.style.color = "var(--ok)";
-      sectionStatus.textContent = "✓ " + window.t("settings.section_saved");
-    }
-    if (sectionButton) sectionButton.classList.remove("attention");
-    refreshContextBudgetPreview();
-  } catch (e) {
-    status.textContent = "Error: " + e.message;
-  } finally {
-    _llmContextSaveBtn.disabled = false;
-  }
-});
-
-function statusBadge(kind, text) {
-  // kind: "ready" (vert) / "warn" (orange) / "error" (rouge) / "active" (bleu/violet)
-  return el("span", { class: "badge badge-" + kind }, text);
 }
 
 async function refreshLLMBackendStatus() {
   const box = $("#llm-backend-status");
   if (!box) return;
-  box.innerHTML = '<span class="hint">Checking LM Studio…</span>';
+  const backend = (($("#s-llm_backend") || {}).value || "lmstudio");
+  box.innerHTML = `<span class="hint">${window.t("settings.checking_provider", { provider: providerLabel(backend) })}</span>`;
   try {
-    const st = await api("/api/llm/backend_status?backend=lmstudio");
+    const st = await api(`/api/llm/backend_status?backend=${encodeURIComponent(backend)}`);
     box.innerHTML = "";
-    box.append(st.reachable ? statusBadge("ready", "✓ LM Studio connected") : statusBadge("error", "LM Studio unreachable"));
+    box.append(st.reachable
+      ? statusBadge("ready", window.t("settings.provider_connected", { provider: providerLabel(backend) }))
+      : statusBadge("error", window.t("settings.provider_unreachable", { provider: providerLabel(backend) })));
     if (st.models && st.models.length) {
       const names = st.models.map(m => (typeof m === "string" ? m : m.id)).filter(Boolean).join(", ");
-      box.append(el("span", { class: "hint" }, `Available model IDs: ${names}`));
-    }
+      box.append(el("span", { class: "hint" }, window.t("settings.available_model_ids", { models: names })));
+    } else if (st.error) box.append(el("span", { class: "hint" }, st.error));
   } catch (e) { box.innerHTML = ""; box.append(statusBadge("error", window.t("system.check_error"))); }
 }
 
@@ -3001,6 +2954,7 @@ if (_llmLoadBtn) _llmLoadBtn.addEventListener("click", async () => {
   const st = $("#llm-action-status");
   _llmLoadBtn.disabled = true; st.innerHTML = '<span class="spinner"></span> loading…';
   try {
+    await persistProviderSettings();
     const res = await api("/api/llm/load", "POST", {});
     st.textContent = res.ok ? window.t("system.llm_load_started_short") : (window.t("common.error") + " : " + res.error);
     setTimeout(refreshLLMBackendStatus, 1000);
@@ -3018,6 +2972,7 @@ if (_llmTestBtn) _llmTestBtn.addEventListener("click", async () => {
   const st = $("#llm-action-status");
   _llmTestBtn.disabled = true; st.innerHTML = '<span class="spinner"></span> test in progress…';
   try {
+    await persistProviderSettings();
     const res = await api("/api/llm/test", "POST", {});
     st.textContent = res.ok
       ? `✓ response received in ${res.duration_s}s : "${res.reply}"`
@@ -4456,40 +4411,79 @@ if (_voiceUploadInput) _voiceUploadInput.addEventListener("change", async (e) =>
 const _lmstudioRefreshModelsBtn = $("#lmstudio-refresh-models-btn");
 if (_lmstudioRefreshModelsBtn) _lmstudioRefreshModelsBtn.addEventListener("click", async () => {
   _lmstudioRefreshModelsBtn.disabled = true;
-  try { await refreshLMStudioModelLists(); }
+  try { await persistProviderSettings(); await refreshLMStudioModelLists(); }
   finally { _lmstudioRefreshModelsBtn.disabled = false; }
 });
 
 function collectSettingsPayload() {
   const out = {};
-  for (const k of SF) out[k] = ($("#s-" + k) || {}).value || "";
-  out.llm_backend = "lmstudio";
+  for (const key of SF) out[key] = ($("#s-" + key) || {}).value || "";
+  const backend = out.llm_backend || "lmstudio";
+  if (backend !== "lmstudio") {
+    const visibleRemote = backend === "runpod_serverless" ? $("#s-llm_remote_model-serverless")
+      : backend === "runpod_pod" ? $("#s-llm_remote_model-pod") : $("#s-llm_remote_model");
+    out.llm_remote_model = visibleRemote?.value || out.llm_remote_model || "";
+    syncRemoteModel(out.llm_remote_model);
+  }
+  for (const secret of ["runpod_api_key", "llm_remote_api_key", "image_remote_api_key"]) {
+    const node = $("#s-" + secret); if (node && node.value.trim()) out[secret] = node.value.trim();
+  }
   const ctxSlider = $("#s-llm_ctx_slider");
   if (ctxSlider) out.llm_ctx = String(parseInt(ctxSlider.value, 10) || 8192);
-
-  const utilFallbackCb = $("#s-llm_util_fallback");
-  out.llm_util_fallback = utilFallbackCb && utilFallbackCb.checked ? "true" : "false";
-  const vramOffloadCb = $("#s-lmstudio_vram_offload_enabled");
-  out.lmstudio_vram_offload_enabled = vramOffloadCb && vramOffloadCb.checked ? "true" : "false";
-  const vramReloadCb = $("#s-lmstudio_reload_on_demand");
-  out.lmstudio_reload_on_demand = vramReloadCb && vramReloadCb.checked ? "true" : "false";
-  const comfyOffloadCb = $("#s-comfy_vram_offload_before_lmstudio");
-  out.comfy_vram_offload_before_lmstudio = comfyOffloadCb && comfyOffloadCb.checked ? "true" : "false";
-  const unloadConvCb = $("#s-lmstudio_unload_conversation_before_utility");
-  out.lmstudio_unload_conversation_before_utility = unloadConvCb && unloadConvCb.checked ? "true" : "false";
-  const unloadUtilCb = $("#s-lmstudio_unload_utility_after_use");
-  out.lmstudio_unload_utility_after_use = unloadUtilCb && unloadUtilCb.checked ? "true" : "false";
-  const retryLmCb = $("#s-lmstudio_retry_after_load_error");
-  out.lmstudio_retry_after_load_error = retryLmCb && retryLmCb.checked ? "true" : "false";
-
-  // Flux 2 Klein loader mode
+  const bools = ["llm_util_fallback", "lmstudio_vram_offload_enabled", "lmstudio_reload_on_demand",
+                 "comfy_vram_offload_before_lmstudio", "lmstudio_unload_conversation_before_utility",
+                 "lmstudio_unload_utility_after_use", "lmstudio_retry_after_load_error", "runpod_auto_stop"];
+  for (const key of bools) { const node = $("#s-" + key); out[key] = node && node.checked ? "true" : "false"; }
   const flux2GgufRadio = $("#s-flux2_mode_gguf");
   out.flux2_loader_mode = (flux2GgufRadio && flux2GgufRadio.checked) ? "gguf" : "safetensors";
-  const ggufSel = $("#s-img_unet_gguf");
-  if (ggufSel && ggufSel.value) out.img_unet_gguf = ggufSel.value;
-  const stSel = $("#s-img_unet_safetensors");
-  if (stSel && stSel.value) out.img_unet_safetensors = stSel.value;
+  const ggufSel = $("#s-img_unet_gguf"); if (ggufSel && ggufSel.value) out.img_unet_gguf = ggufSel.value;
+  const stSel = $("#s-img_unet_safetensors"); if (stSel && stSel.value) out.img_unet_safetensors = stSel.value;
   return out;
+}
+
+function toggleImageBackendFields() {
+  const backend = (($("#s-image_backend") || {}).value || "comfy_local");
+  const map = {"image-local-fields": backend === "comfy_local", "image-remote-fields": backend === "comfy_remote",
+               "image-serverless-fields": backend === "runpod_serverless", "image-pod-fields": backend === "runpod_pod"};
+  for (const [id, visible] of Object.entries(map)) { const node = $("#" + id); if (node) node.style.display = visible ? "block" : "none"; }
+}
+
+async function persistProviderSettings() {
+  await api("/api/settings", "POST", collectSettingsPayload());
+}
+
+async function refreshPodStatus(role) {
+  const node = $("#" + role + "-pod-status"); if (!node) return;
+  try {
+    const status = await api(`/api/cloud/pod/status?role=${encodeURIComponent(role)}`);
+    const provider = status.provider_status || (status.configured ? window.t("settings.pod_unknown") : window.t("settings.pod_not_configured"));
+    const remain = status.manager?.idle_remaining_seconds;
+    node.textContent = remain != null
+      ? window.t("settings.pod_auto_stop_in", { status: provider, minutes: Math.ceil(remain / 60) })
+      : provider;
+    if (status.error) node.textContent += ` · ${status.error}`;
+  } catch (e) { node.textContent = e.message; }
+}
+
+async function podAction(role, action) {
+  const node = $("#" + role + "-pod-status");
+  if (node) node.innerHTML = '<span class="spinner"></span> ' + window.t(action === "start" ? "settings.pod_action_start" : "settings.pod_action_stop") + '…';
+  try {
+    await persistProviderSettings();
+    const result = await api(`/api/cloud/pod/${action}`, "POST", {role});
+    if (node) node.textContent = result.provider_status || result.manager?.last_action || action;
+    setTimeout(() => refreshPodStatus(role), 1000);
+  } catch (e) { if (node) node.textContent = e.message; toast(e.message, true); }
+}
+
+for (const role of ["llm", "image"]) {
+  const startBtn = $("#" + role + "-pod-start"); if (startBtn) startBtn.addEventListener("click", () => podAction(role, "start"));
+  const stopBtn = $("#" + role + "-pod-stop"); if (stopBtn) stopBtn.addEventListener("click", () => podAction(role, "stop"));
+}
+const providerSelect = $("#s-llm_backend"); if (providerSelect) providerSelect.addEventListener("change", toggleLLMBackendFields);
+const imageProviderSelect = $("#s-image_backend"); if (imageProviderSelect) imageProviderSelect.addEventListener("change", toggleImageBackendFields);
+for (const id of ["s-llm_remote_model", "s-llm_remote_model-serverless", "s-llm_remote_model-pod"]) {
+  const node = $("#" + id); if (node) node.addEventListener("change", () => syncRemoteModel(node.value));
 }
 
 async function saveSettingsFromForm(button, statusEl, showToast = true) {
@@ -4531,6 +4525,11 @@ async function saveSettingsFromForm(button, statusEl, showToast = true) {
     if (showToast) toast(window.t("settings.toasts.saved"));
     refreshLLMUtilStatus();
     refreshLMStudioVRAMStatus();
+    refreshLLMBackendStatus();
+    refreshPodStatus("llm"); refreshPodStatus("image");
+    for (const secret of ["runpod_api_key", "llm_remote_api_key", "image_remote_api_key"]) {
+      const node = $("#s-" + secret); if (node) node.value = "";
+    }
     return true;
   } catch (e) {
     if (statusEl) {
@@ -6358,8 +6357,8 @@ async function refreshDiagnosticRuntime() {
     const lifecycle = lm.lifecycle || {};
     let lmState = activity.gen_active ? "generating" : (lifecycle.state || "idle");
     let lmMessage = activity.gen_active
-      ? `LM Studio is generating a ${lifecycle.role || "text"} response`
-      : (lifecycle.message || (lm.reachable ? "LM Studio is reachable" : "LM Studio is unavailable"));
+      ? `The selected text engine is generating a ${lifecycle.role || "text"} response`
+      : (lifecycle.message || (lm.reachable ? "Text engine is reachable" : "Text engine is unavailable"));
     const loaded = [
       lm.conversational_loaded ? "conversation loaded" : "conversation unloaded",
       lm.utility_applicable ? (lm.utility_loaded ? "utility loaded" : "utility unloaded") : "utility disabled",

@@ -3,18 +3,21 @@
 # Copyright 2026 Ariku
 # SPDX-License-Identifier: Apache-2.0
 """
-engine.py — local AI orchestration.
+engine.py — local-first AI engine orchestration.
 
-  - Text: LM Studio through its local OpenAI-compatible and native management APIs.
-  - Image: a separately installed third-party ComfyUI instance through its local HTTP API.
-    AmiorAI never installs, launches, restarts or terminates ComfyUI.
+  - Text: LM Studio locally, or an optional user-owned OpenAI-compatible / Runpod engine.
+  - Image: a separately installed local or remote ComfyUI-compatible engine, or Runpod Serverless.
+  - Voice: optional local TTS only.
 
-VRAM coordination swaps LM Studio, external ComfyUI and the optional CUDA TTS engine so only
-the model required by the current task occupies the GPU. No LLM or TTS weights are
-loaded inside the main AmiorAI Python process.
+Local VRAM coordination swaps LM Studio, external local ComfyUI and the optional CUDA TTS engine
+only when those engines share the user's GPU. Remote workloads never trigger unnecessary local
+unloads. No LLM, image or TTS weights are loaded inside the main AmiorAI Python process.
 """
 
 import atexit
+import base64
+import contextlib
+import mimetypes
 import logging
 import json
 import os
@@ -31,6 +34,8 @@ import urllib.parse
 import model_manifests
 
 import lmstudio_vram
+import remote_runtime
+import secret_store
 
 # Logger fichier (herite des handlers configures par app.py::logging.basicConfig, donc ecrit
 # aussi dans data/logs/app.log). Utilise pour distinguer explicitement les deux routes LLM :
@@ -62,6 +67,7 @@ _COMFY_GEN_STATE = {
     "queue_running": 0, "queue_pending": 0, "message": "",
 }
 _COMFY_GEN_LOCK = threading.Lock()
+_SERVERLESS_UPLOADS = threading.local()
 
 
 def _set_comfy_generation_state(**values):
@@ -70,7 +76,7 @@ def _set_comfy_generation_state(**values):
 
 
 def comfy_generation_status(settings=None):
-    """Return the latest ComfyUI generation lifecycle and live queue counts."""
+    """Return the latest image generation lifecycle and live queue counts."""
     with _COMFY_GEN_LOCK:
         state = dict(_COMFY_GEN_STATE)
     now = time.time()
@@ -79,21 +85,23 @@ def comfy_generation_status(settings=None):
     endpoint = finished if finished and state.get("state") in ("complete", "error") else now
     state["elapsed"] = round(max(0.0, endpoint - started), 1) if started and state.get("state") != "idle" else 0
     if settings:
-        try:
-            base = _comfy_base(settings)
-            with urllib.request.urlopen(base + "/queue", timeout=2) as resp:
-                queue = json.loads(resp.read().decode("utf-8"))
-            state["queue_running"] = len(queue.get("queue_running", []))
-            state["queue_pending"] = len(queue.get("queue_pending", []))
-            state["reachable"] = True
-        except Exception as exc:  # status must never break the UI
-            state["reachable"] = False
-            state["probe_error"] = str(exc)
+        if _image_backend(settings) == "runpod_serverless":
+            state["reachable"] = _comfy_is_up(settings)
+        else:
+            try:
+                base = _comfy_base(settings)
+                with _comfy_request(base + "/queue", settings, timeout=2) as resp:
+                    queue = json.loads(resp.read().decode("utf-8"))
+                state["queue_running"] = len(queue.get("queue_running", []))
+                state["queue_pending"] = len(queue.get("queue_pending", []))
+                state["reachable"] = True
+            except Exception as exc:
+                state["reachable"] = False
+                state["probe_error"] = str(exc)
     return state
 
-
 def _llm_log(kind, msg):
-    """Append one bounded LM Studio activity event for the UI and logs."""
+    """Append one bounded LLM activity event for the UI and logs."""
     with _LLM_EVENTS_LOCK:
         _LLM_EVENTS.append({"t": time.time(), "kind": kind, "msg": str(msg)[:400]})
         del _LLM_EVENTS[:-_LLM_MAX_EVENTS]
@@ -125,12 +133,55 @@ def llm_status():
     return st
 
 
-def preload_llm(settings):
-    """Load or confirm the configured conversation model in LM Studio."""
-    with lmstudio_vram.vram_lock_for_text("conversation"):
-        prepare_vram_for_lmstudio(settings, "conversation")
-        return lmstudio_vram.ensure_loaded(settings, "conversation")
+def _llm_backend(settings):
+    value = (settings.get("llm_backend") or "lmstudio").strip()
+    return value if value in ("lmstudio", "openai_compatible", "runpod_serverless", "runpod_pod") else "lmstudio"
 
+
+def _image_backend(settings):
+    value = (settings.get("image_backend") or "comfy_local").strip()
+    return value if value in ("comfy_local", "comfy_remote", "runpod_serverless", "runpod_pod") else "comfy_local"
+
+
+def _runpod_idle_seconds(settings):
+    return int(_setting_float(settings, "runpod_idle_minutes", 15, min_value=1, max_value=120) * 60)
+
+
+def _runpod_auto_stop(settings):
+    return _setting_bool(settings, "runpod_auto_stop", True)
+
+
+def _remote_llm_connection(settings):
+    backend = _llm_backend(settings)
+    if backend == "openai_compatible":
+        return remote_runtime.normalize_openai_base(settings.get("llm_remote_url")), secret_store.get_secret("llm_remote_api_key")
+    if backend == "runpod_serverless":
+        return remote_runtime.runpod_serverless_openai_base(settings.get("llm_runpod_endpoint_id")), secret_store.get_secret("runpod_api_key")
+    if backend == "runpod_pod":
+        return remote_runtime.normalize_openai_base(settings.get("llm_runpod_pod_url")), secret_store.get_secret("llm_remote_api_key")
+    return _normalize_lmstudio_base(settings.get("lmstudio_url")), (settings.get("lmstudio_api_key") or "")
+
+
+def _remote_image_auth(settings):
+    return secret_store.get_secret("image_remote_api_key") if _image_backend(settings) in ("comfy_remote", "runpod_pod") else ""
+
+def preload_llm(settings):
+    """Load the selected local model or verify the selected user-owned remote engine."""
+    backend = _llm_backend(settings)
+    if backend == "lmstudio":
+        with lmstudio_vram.vram_lock_for_text("conversation"):
+            prepare_vram_for_lmstudio(settings, "conversation")
+            return lmstudio_vram.ensure_loaded(settings, "conversation")
+    base, api_key = _remote_llm_connection(settings)
+    if backend == "runpod_pod":
+        with remote_runtime.runpod_pod_job(
+            "llm", settings.get("llm_runpod_pod_id"), secret_store.get_secret("runpod_api_key"),
+            base + "/models" if base else "", api_key,
+            _setting_float(settings, "llm_runpod_start_timeout", 900, 30, 3600),
+            _runpod_idle_seconds(settings), _runpod_auto_stop(settings),
+        ):
+            return {"backend": backend, "models": remote_runtime.openai_models(base, api_key)}
+    return {"backend": backend, "models": remote_runtime.openai_models(base, api_key)}
 
 def _setting_float(settings, key, default, min_value=None, max_value=None):
     try:
@@ -402,13 +453,37 @@ def _lmstudio_chat(messages, settings, max_tokens, temp, stop, role="conversatio
 
     raise RuntimeError(f"LM Studio request failed at {base}. Details: {last_error}")
 
-def llm_util_chat(messages, settings, max_tokens=None, temperature=None, stop=None):
-    """Route structured tasks to the optional utility model on the same LM Studio server."""
-    util_enabled = _setting_bool(settings, "llm_util_enabled", False)
-    if not util_enabled:
-        log.info("[conversation] Utility model disabled; using the main LM Studio model.")
-        return llm_chat(messages, settings, max_tokens=max_tokens, temperature=temperature, stop=stop)
+def _remote_llm_chat(messages, settings, max_tokens, temp, stop, role="conversation"):
+    backend = _llm_backend(settings)
+    base, api_key = _remote_llm_connection(settings)
+    model = (settings.get("llm_remote_model") if role == "conversation" else
+             (settings.get("llm_util_model") or settings.get("llm_remote_model"))) or ""
+    timeout = _setting_float(settings, "lmstudio_request_timeout", 600, min_value=30, max_value=7200)
+    _llm_log("request", f"{backend} [{role}] · {model or '(auto)'} @ {base}")
+    started = time.time()
+    _LLM_STATE.update(state="ready", gen_active=True, gen_tokens=0, gen_started=started, error=None)
+    try:
+        ctx = (remote_runtime.runpod_pod_job(
+            "llm", settings.get("llm_runpod_pod_id"), secret_store.get_secret("runpod_api_key"),
+            base + "/models" if base else "", api_key,
+            _setting_float(settings, "llm_runpod_start_timeout", 900, 30, 3600),
+            _runpod_idle_seconds(settings), _runpod_auto_stop(settings),
+        ) if backend == "runpod_pod" else contextlib.nullcontext())
+        with ctx:
+            reply = remote_runtime.openai_chat(base, api_key, model, messages,
+                                               max_tokens, temp, stop, timeout)
+        _LLM_STATE.update(gen_active=False)
+        _llm_log("done", f"{backend} response [{role}] · {round(time.time()-started, 2)} s")
+        return reply
+    except Exception as exc:
+        _LLM_STATE.update(state="error", gen_active=False, error=str(exc))
+        _llm_log("error", f"{backend} request failed: {exc}")
+        raise
 
+def llm_util_chat(messages, settings, max_tokens=None, temperature=None, stop=None):
+    """Route structured tasks through the selected provider, with an optional model ID."""
+    if not _setting_bool(settings, "llm_util_enabled", False):
+        return llm_chat(messages, settings, max_tokens=max_tokens, temperature=temperature, stop=stop)
     try:
         n_tok = int(float(max_tokens if max_tokens not in (None, "") else 800))
     except (TypeError, ValueError):
@@ -418,7 +493,12 @@ def llm_util_chat(messages, settings, max_tokens=None, temperature=None, stop=No
     except (TypeError, ValueError):
         temp = 0.7
     fallback = _setting_bool(settings, "llm_util_fallback", False)
+    backend = _llm_backend(settings)
     try:
+        if backend != "lmstudio":
+            result = _remote_llm_chat(messages, settings, n_tok, temp, stop, role="utility")
+            log.info("[utility] Task completed with model: %s", settings.get("llm_util_model") or "(conversation model)")
+            return result
         with lmstudio_vram.vram_lock_for_text("utility"):
             prepare_vram_for_lmstudio(settings, "utility")
             unload_conv_before = _setting_bool(settings, "lmstudio_unload_conversation_before_utility", True)
@@ -428,29 +508,23 @@ def llm_util_chat(messages, settings, max_tokens=None, temperature=None, stop=No
                 lmstudio_vram.unload_role_model(settings, "conversation")
             lmstudio_vram.ensure_loaded(settings, "utility")
             try:
-                result = _lmstudio_chat(messages, settings, n_tok, temp, stop, role="utility")
-                log.info(f"[utility] Task completed with LM Studio model: {settings.get('llm_util_model') or '(auto)'}")
-                return result
+                return _lmstudio_chat(messages, settings, n_tok, temp, stop, role="utility")
             finally:
                 if unload_util_after and not shared:
                     lmstudio_vram.unload_role_model(settings, "utility")
-    except Exception as e:  # noqa: BLE001
+    except Exception as exc:
         if fallback:
-            log.warning(f"[utility fallback -> conversation] Utility LM Studio model unavailable ({e}).")
+            log.warning("[utility fallback -> conversation] Utility model unavailable: %s", exc)
             return llm_chat(messages, settings, max_tokens=max_tokens, temperature=temperature, stop=stop)
-        raise RuntimeError(
-            "The LM Studio utility model is unavailable. Check its exact model ID in Settings. "
-            f"Details: {e}"
-        ) from e
+        raise RuntimeError(f"The utility model is unavailable on {backend}. Details: {exc}") from exc
 
 def llm_chat(messages, settings, max_tokens=None, temperature=None, stop=None):
-    """Main conversation route. Empty numeric settings fall back safely."""
+    """Main conversation route for the selected local or user-owned remote provider."""
     raw_tokens = max_tokens if max_tokens is not None else settings.get("llm_max_tokens", 400)
     try:
-        n_tok = int(float(raw_tokens or 400))
+        n_tok = max(1, min(int(float(raw_tokens or 400)), 32768))
     except (TypeError, ValueError):
         n_tok = 400
-    n_tok = max(1, min(n_tok, 32768))
     if temperature is None:
         temp = _setting_float(settings, "llm_temperature", 0.85, min_value=0, max_value=2)
     else:
@@ -458,30 +532,75 @@ def llm_chat(messages, settings, max_tokens=None, temperature=None, stop=None):
             temp = float(temperature or 0.85)
         except (TypeError, ValueError):
             temp = 0.85
+    if _llm_backend(settings) != "lmstudio":
+        return _remote_llm_chat(messages, settings, n_tok, temp, stop, role="conversation")
     with lmstudio_vram.vram_lock_for_text("conversation"):
         prepare_vram_for_lmstudio(settings, "conversation")
         lmstudio_vram.ensure_loaded(settings, "conversation")
         return _lmstudio_chat(messages, settings, n_tok, temp, stop, role="conversation")
 
-
-# --------------------------------------------------------------------------- #
-#  ComfyUI tiers : connexion exclusive par API HTTP locale
-# --------------------------------------------------------------------------- #
 def _comfy_base(settings):
-    return (settings.get("comfy_url") or "http://127.0.0.1:8188").rstrip("/")
+    backend = _image_backend(settings)
+    if backend == "comfy_local":
+        return (settings.get("comfy_url") or "http://127.0.0.1:8188").rstrip("/")
+    if backend == "comfy_remote":
+        return (settings.get("image_remote_url") or "").strip().rstrip("/")
+    if backend == "runpod_pod":
+        return (settings.get("image_runpod_pod_url") or "").strip().rstrip("/")
+    return ""
 
+def _comfy_headers(settings, extra=None):
+    headers = dict(extra or {})
+    key = _remote_image_auth(settings)
+    if key:
+        headers["Authorization"] = "Bearer " + key
+    return headers
+
+
+def _comfy_request(url, settings, data=None, method=None, headers=None, timeout=30):
+    req = urllib.request.Request(url, data=data, method=method,
+                                 headers=_comfy_headers(settings, headers))
+    return urllib.request.urlopen(req, timeout=timeout)
+
+
+@contextlib.contextmanager
+def _image_runtime_session(settings):
+    if _image_backend(settings) != "runpod_pod":
+        yield
+        return
+    base = _comfy_base(settings)
+    with remote_runtime.runpod_pod_job(
+        "image", settings.get("image_runpod_pod_id"), secret_store.get_secret("runpod_api_key"),
+        base + "/system_stats" if base else "", _remote_image_auth(settings),
+        _setting_float(settings, "image_runpod_start_timeout", 900, 30, 3600),
+        _runpod_idle_seconds(settings), _runpod_auto_stop(settings),
+    ):
+        yield
+
+
+@contextlib.contextmanager
+def _image_gpu_lock(settings):
+    local_lock = (lmstudio_vram.vram_lock_for_image() if _image_backend(settings) == "comfy_local"
+                  else contextlib.nullcontext())
+    with local_lock:
+        with _image_runtime_session(settings):
+            yield
 
 def _comfy_is_up(settings):
+    backend = _image_backend(settings)
+    if backend == "runpod_serverless":
+        return bool((settings.get("image_runpod_endpoint_id") or "").strip()
+                    and secret_store.get_secret("runpod_api_key"))
     base = _comfy_base(settings)
+    if not base:
+        return False
     for ep in ("/system_stats", "/"):
         try:
-            with urllib.request.urlopen(base + ep, timeout=3):
+            with _comfy_request(base + ep, settings, timeout=3):
                 return True
         except Exception:
             continue
     return False
-
-
 
 def _tts_vram_offload_enabled(settings):
     return _setting_bool(settings, "tts_vram_offload_enabled", True)
@@ -547,102 +666,75 @@ def _offload_tts_before_gpu_task(settings, target):
 
 
 def _unload_lmstudio_before_image(settings):
-    """Release CUDA TTS and AmiorAI LM Studio models before image generation."""
+    """Release local CUDA engines only when image generation also uses the local GPU."""
+    if _image_backend(settings) != "comfy_local":
+        return
     _offload_tts_before_gpu_task(settings, "ComfyUI image generation")
     try:
         lmstudio_vram.unload_amiorai_models(settings)
-    except RuntimeError as e:
-        # LM Studio est requis (backend actif ou utility sur le meme serveur) mais son API
-        # native est inaccessible -> erreur claire remontee, jamais de fallback silencieux.
-        raise RuntimeError(f"[VRAM] {e}")
-
+    except RuntimeError as exc:
+        raise RuntimeError(f"[VRAM] {exc}")
 
 def comfy_ensure(settings):
-    """Require a separately installed third-party ComfyUI instance to be reachable."""
+    """Require the selected local, remote or Serverless image engine configuration."""
+    backend = _image_backend(settings)
+    if backend == "runpod_serverless":
+        if not (settings.get("image_runpod_endpoint_id") or "").strip():
+            raise RuntimeError("Runpod image Endpoint ID is missing.")
+        if not secret_store.get_secret("runpod_api_key"):
+            raise RuntimeError("Runpod API key is not configured.")
+        return
     if _comfy_is_up(settings):
         return
     base = _comfy_base(settings)
-    raise RuntimeError(
-        f"External ComfyUI is not reachable at {base}. "
-        "Start ComfyUI from its own launcher, verify that its API is enabled, "
-        "then check the ComfyUI address in AmiorAI Settings."
-    )
-
-
+    raise RuntimeError(f"The configured {backend} image engine is not reachable at {base or '(empty URL)'}. Check its URL and start it if needed.")
 
 def comfy_free(settings):
-    """Demande a ComfyUI de decharger ses modeles (libere la VRAM pour le LLM). Si ComfyUI
-    n'est pas joignable du tout, ne fait rien (rien a liberer) -- mais si ComfyUI REPOND et
-    que /free echoue (erreur HTTP, refus), leve une RuntimeError claire plutot que d'avaler
-    silencieusement l'erreur, pour que l'appelant puisse decider quoi en faire."""
-    if not _comfy_is_up(settings):
+    """Ask a directly connected ComfyUI server to release its models."""
+    if _image_backend(settings) == "runpod_serverless" or not _comfy_is_up(settings):
         return
     base = _comfy_base(settings)
     data = json.dumps({"unload_models": True, "free_memory": True}).encode()
-    req = urllib.request.Request(base + "/free", data=data,
-                                 headers={"Content-Type": "application/json"})
     try:
-        urllib.request.urlopen(req, timeout=15)
-    except Exception as e:  # noqa: BLE001
-        raise RuntimeError(f"ComfyUI refused to release VRAM (/free): {e}")
-
+        with _comfy_request(base + "/free", settings, data=data,
+                            headers={"Content-Type": "application/json"}, timeout=15):
+            pass
+    except Exception as exc:
+        raise RuntimeError(f"ComfyUI refused to release VRAM (/free): {exc}")
 
 def comfy_status(settings):
-    return {
-        "reachable": _comfy_is_up(settings),
-        "external": True,
-        "managed_by_app": False,
-        "pid": None,
-    }
-
+    return {"reachable": _comfy_is_up(settings), "backend": _image_backend(settings),
+            "external": True, "managed_by_app": False, "pid": None}
 
 def _comfy_vram(settings):
-    """Lit /system_stats de ComfyUI pour connaitre l'etat VRAM du GPU qu'il utilise. Renvoie
-    {name, total_mb, free_mb, used_mb, percent} ou None si injoignable / pas de GPU rapporte.
-    Utilisee a la fois par le health check (Reglages -> Systeme) et par
-    prepare_vram_for_lmstudio() pour confirmer qu'une liberation de VRAM a bien eu lieu."""
+    if _image_backend(settings) == "runpod_serverless":
+        return None
     base = _comfy_base(settings)
     try:
-        with urllib.request.urlopen(base + "/system_stats", timeout=5) as r:
-            data = json.loads(r.read().decode("utf-8"))
+        with _comfy_request(base + "/system_stats", settings, timeout=5) as response:
+            data = json.loads(response.read().decode("utf-8"))
     except Exception:
         return None
     devices = data.get("devices") or []
     gpu = next((d for d in devices if d.get("type") == "cuda"), devices[0] if devices else None)
-    if not gpu:
+    if not gpu or gpu.get("vram_total") is None or gpu.get("vram_free") is None:
         return None
-    total = gpu.get("vram_total")
-    free = gpu.get("vram_free")
-    if total is None or free is None:
-        return None
+    total, free = gpu["vram_total"], gpu["vram_free"]
     used = total - free
-
-    def mb(n_bytes):
-        return round(n_bytes / (1024 * 1024))
-
-    return {
-        "name": gpu.get("name", "GPU"),
-        "total_mb": mb(total),
-        "free_mb": mb(free),
-        "used_mb": mb(used),
-        "percent": round(100 * used / total) if total else 0,
-    }
-
+    mb = lambda value: round(value / (1024 * 1024))
+    return {"name": gpu.get("name", "GPU"), "total_mb": mb(total), "free_mb": mb(free),
+            "used_mb": mb(used), "percent": round(100 * used / total) if total else 0}
 
 def _comfy_is_busy(settings):
-    """Lit /queue de ComfyUI. Renvoie True si une generation tourne ou est en attente
-    (queue_running ou queue_pending non vides), False si idle, None si /queue est
-    inaccessible (ComfyUI probablement pas demarre -- pas occupe, juste absent)."""
+    if _image_backend(settings) == "runpod_serverless":
+        return False
     base = _comfy_base(settings)
     try:
-        with urllib.request.urlopen(base + "/queue", timeout=5) as r:
-            data = json.loads(r.read().decode("utf-8"))
+        with _comfy_request(base + "/queue", settings, timeout=5) as response:
+            data = json.loads(response.read().decode("utf-8"))
     except Exception:
         return None
-    running = data.get("queue_running") or []
-    pending = data.get("queue_pending") or []
-    return bool(running or pending)
-
+    return bool((data.get("queue_running") or []) or (data.get("queue_pending") or []))
 
 def prepare_vram_for_lmstudio(settings, role):
     """Bascule VRAM ComfyUI -> LM Studio, symetrique de _unload_lmstudio_before_image (qui
@@ -666,6 +758,10 @@ def prepare_vram_for_lmstudio(settings, role):
         polling (jusqu'a 15s), puis rend la main pour que LM Studio puisse charger."""
     # TTS has its own CUDA process. Stop it first so LM Studio can reload without an OOM.
     _offload_tts_before_gpu_task(settings, f"LM Studio {role}")
+
+    # A remote image engine does not occupy the user's local GPU.
+    if _image_backend(settings) != "comfy_local":
+        return
 
     offload_enabled = str(settings.get("comfy_vram_offload_before_lmstudio", "true")).lower() in ("true", "1", "yes")
     if not offload_enabled:
@@ -1024,35 +1120,28 @@ def tts_kill(settings):
 
 
 def prepare_vram_for_tts(settings):
-    """Give the CUDA GPU to TTS by unloading LM Studio and freeing idle ComfyUI models."""
+    """Give the local CUDA GPU to TTS without disturbing remote engines."""
     if not _tts_vram_offload_enabled(settings) or not _tts_should_use_cuda(settings):
         return
-
-    try:
-        lmstudio_vram.unload_amiorai_models(settings)
-    except RuntimeError as exc:
-        # A stopped LM Studio server must not prevent standalone speech. If it is reachable but
-        # its native API fails, preserve the clear error because VRAM ownership is uncertain.
-        message = str(exc).lower()
-        if "unreachable" in message or "connection" in message or "refused" in message:
-            log.info("[VRAM] LM Studio unavailable while preparing TTS; continuing standalone")
-        else:
-            raise RuntimeError(f"[VRAM] Unable to release LM Studio before TTS: {exc}") from exc
-
-    if not _comfy_is_up(settings):
+    if _llm_backend(settings) == "lmstudio":
+        try:
+            lmstudio_vram.unload_amiorai_models(settings)
+        except RuntimeError as exc:
+            message = str(exc).lower()
+            if "unreachable" in message or "connection" in message or "refused" in message:
+                log.info("[VRAM] LM Studio unavailable while preparing TTS; continuing standalone")
+            else:
+                raise RuntimeError(f"[VRAM] Unable to release LM Studio before TTS: {exc}") from exc
+    if _image_backend(settings) != "comfy_local" or not _comfy_is_up(settings):
         return
     busy_timeout = _setting_float(settings, "comfy_busy_wait_timeout", 180, min_value=10, max_value=3600)
     deadline = time.time() + busy_timeout
     while _comfy_is_busy(settings):
         if time.time() >= deadline:
-            raise RuntimeError(
-                f"ComfyUI is still generating after {busy_timeout:g} seconds. "
-                "Voice generation was canceled to avoid corrupting the active image task."
-            )
+            raise RuntimeError(f"ComfyUI is still generating after {busy_timeout:g} seconds. Voice generation was canceled to avoid corrupting the active image task.")
         time.sleep(0.5)
     comfy_free(settings)
     log.info("[VRAM] ComfyUI models released before TTS")
-
 
 def tts_start(settings, force=True):
     if _tts_is_up(settings):
@@ -1455,55 +1544,45 @@ _flux2_workflow = resolve_flux2_workflow_variant
 
 
 def comfy_unet_loader_info(settings):
-    """Interroge ComfyUI /object_info/UNETLoader pour obtenir les valeurs autorisées
-    de weight_dtype et la valeur par défaut. Retourne un dict ou None si inaccessible."""
-    base = (settings.get("comfy_url") or "http://127.0.0.1:8188").rstrip("/")
+    if _image_backend(settings) == "runpod_serverless":
+        return None
+    base = _comfy_base(settings)
     try:
-        import urllib.request
-        with urllib.request.urlopen(f"{base}/object_info/UNETLoader", timeout=5) as r:
-            import json as _json
-            info = _json.loads(r.read())
-        node = info.get("UNETLoader", {})
-        inputs = node.get("input", {}).get("required", {})
+        with _comfy_request(f"{base}/object_info/UNETLoader", settings, timeout=5) as response:
+            info = json.loads(response.read())
+        inputs = info.get("UNETLoader", {}).get("input", {}).get("required", {})
         dtype_info = inputs.get("weight_dtype", [])
         if isinstance(dtype_info, list) and dtype_info:
             allowed = dtype_info[0] if isinstance(dtype_info[0], list) else []
             default = dtype_info[1].get("default", allowed[0] if allowed else "default") if len(dtype_info) > 1 else (allowed[0] if allowed else "default")
         else:
-            allowed = ["default", "fp8_e4m3fn", "fp8_e5m2", "fp16", "bf16"]
-            default = "default"
+            allowed, default = ["default", "fp8_e4m3fn", "fp8_e5m2", "fp16", "bf16"], "default"
         return {"allowed": allowed, "default": default}
-    except Exception as e:
-        log.warning(f"[Flux2-ST] Impossible de lire /object_info/UNETLoader : {e}")
+    except Exception as exc:
+        log.warning("[Flux2-ST] Unable to read /object_info/UNETLoader: %s", exc)
         return None
 
-
-_COMFY_CHOICES_CACHE = {}
-
-
 def comfy_input_choices(settings, node_type, input_name, max_age=15):
-    """Return the exact list of values accepted by one ComfyUI loader input."""
+    """Return values accepted by a directly connected ComfyUI loader input."""
+    if _image_backend(settings) == "runpod_serverless":
+        return []
     base = _comfy_base(settings)
     cache_key = (base, node_type, input_name)
     cached = _COMFY_CHOICES_CACHE.get(cache_key)
     if cached and time.time() - cached[0] <= max_age:
         return list(cached[1])
     try:
-        with urllib.request.urlopen(f"{base}/object_info/{node_type}", timeout=10) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-        node = data.get(node_type, {})
-        inputs = node.get("input", {})
-        spec = (inputs.get("required", {}).get(input_name)
-                or inputs.get("optional", {}).get(input_name)
-                or [])
+        with _comfy_request(f"{base}/object_info/{node_type}", settings, timeout=10) as response:
+            data = json.loads(response.read().decode("utf-8"))
+        inputs = data.get(node_type, {}).get("input", {})
+        spec = inputs.get("required", {}).get(input_name) or inputs.get("optional", {}).get(input_name) or []
         choices = spec[0] if isinstance(spec, list) and spec and isinstance(spec[0], list) else []
-        choices = [str(v) for v in choices]
+        choices = [str(value) for value in choices]
         _COMFY_CHOICES_CACHE[cache_key] = (time.time(), choices)
         return choices
-    except Exception as e:
-        log.warning(f"[ComfyUI] Unable to read choices for {node_type}.{input_name}: {e}")
+    except Exception as exc:
+        log.warning("[ComfyUI] Unable to read choices for %s.%s: %s", node_type, input_name, exc)
         return []
-
 
 def _portable_model_name(value):
     return (value or "").strip().replace("\\", "/").lstrip("./")
@@ -1573,25 +1652,17 @@ def _resolve_comfy_choice(settings, node_type, input_name, selected, label="mode
     return selected
 
 def comfy_list_loras(settings):
-    """Interroge ComfyUI via /object_info/LoraLoader pour obtenir la liste exacte
-    des noms de LoRA qu'il connaît (chemins relatifs depuis models/loras/).
-    Retourne une liste de strings, ou [] si ComfyUI est inaccessible."""
+    if _image_backend(settings) == "runpod_serverless":
+        return []
     base = _comfy_base(settings)
     try:
-        with urllib.request.urlopen(base + "/object_info/LoraLoader", timeout=10) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-        # Structure : {"LoraLoader": {"input": {"required": {"lora_name": [["list","of","files"], ...]}}}}
-        lora_name_spec = (data.get("LoraLoader", {})
-                              .get("input", {})
-                              .get("required", {})
-                              .get("lora_name", []))
-        if lora_name_spec and isinstance(lora_name_spec[0], list):
-            return lora_name_spec[0]
+        with _comfy_request(base + "/object_info/LoraLoader", settings, timeout=10) as response:
+            data = json.loads(response.read().decode("utf-8"))
+        spec = data.get("LoraLoader", {}).get("input", {}).get("required", {}).get("lora_name", [])
+        return spec[0] if spec and isinstance(spec[0], list) else []
+    except Exception as exc:
+        log.warning("[LoRA] Unable to query ComfyUI /object_info/LoraLoader: %s", exc)
         return []
-    except Exception as e:
-        log.warning(f"[LoRA] Impossible d'interroger ComfyUI /object_info/LoraLoader : {e}")
-        return []
-
 
 def _resolve_lora_name(requested_name, known_loras):
     """Resolve a catalog/Windows path to the exact LoRA value accepted by ComfyUI.
@@ -1886,128 +1957,117 @@ def _inject_loras(wf, prompt, settings):
 
 
 def comfy_upload_image(image_path, settings):
-    boundary = "----companion" + uuid.uuid4().hex
     fname = os.path.basename(image_path)
-    with open(image_path, "rb") as f:
-        file_bytes = f.read()
-    body = b""
-    body += ("--" + boundary + "\r\n").encode()
-    body += (f'Content-Disposition: form-data; name="image"; filename="{fname}"\r\n').encode()
-    body += b"Content-Type: image/png\r\n\r\n" + file_bytes + b"\r\n"
-    body += ("--" + boundary + "\r\n").encode()
-    body += b'Content-Disposition: form-data; name="overwrite"\r\n\r\ntrue\r\n'
-    body += ("--" + boundary + "--\r\n").encode()
-    url = _comfy_base(settings) + "/upload/image"
-    req = urllib.request.Request(url, data=body,
-                                 headers={"Content-Type": "multipart/form-data; boundary=" + boundary})
-    with urllib.request.urlopen(req, timeout=120) as resp:
-        out = json.loads(resp.read().decode("utf-8"))
+    with open(image_path, "rb") as file:
+        file_bytes = file.read()
+    if _image_backend(settings) == "runpod_serverless":
+        mime = mimetypes.guess_type(fname)[0] or "image/png"
+        images = getattr(_SERVERLESS_UPLOADS, "images", [])
+        images.append({"name": fname, "image": f"data:{mime};base64," + base64.b64encode(file_bytes).decode("ascii")})
+        _SERVERLESS_UPLOADS.images = images
+        return fname
+    boundary = "----companion" + uuid.uuid4().hex
+    nl = bytes((13, 10))
+    body = ("--" + boundary).encode() + nl
+    body += f'Content-Disposition: form-data; name="image"; filename="{fname}"'.encode() + nl
+    body += b"Content-Type: image/png" + nl + nl + file_bytes + nl
+    body += ("--" + boundary).encode() + nl
+    body += b'Content-Disposition: form-data; name="overwrite"' + nl + nl
+    body += b"true" + nl + ("--" + boundary + "--").encode() + nl
+    with _comfy_request(_comfy_base(settings) + "/upload/image", settings, data=body,
+                        headers={"Content-Type": "multipart/form-data; boundary=" + boundary}, timeout=120) as response:
+        out = json.loads(response.read().decode("utf-8"))
     return out.get("name", fname)
 
-
 def comfy_queue_and_fetch(workflow, settings, timeout=600):
-    base = _comfy_base(settings)
-    client_id = uuid.uuid4().hex
     started = time.time()
-    _set_comfy_generation_state(
-        state="active", stage="submitting", prompt_id=None, started=started, finished=0.0,
-        error=None, queue_running=0, queue_pending=0, message="Sending workflow to ComfyUI",
-    )
+    _set_comfy_generation_state(state="active", stage="submitting", prompt_id=None,
+        started=started, finished=0.0, error=None, queue_running=0, queue_pending=0,
+        message="Sending workflow to image engine")
     try:
-        payload = json.dumps({"prompt": workflow, "client_id": client_id}).encode("utf-8")
-        req = urllib.request.Request(base + "/prompt", data=payload,
-                                     headers={"Content-Type": "application/json"})
-        try:
-            with urllib.request.urlopen(req, timeout=60) as resp:
-                out = json.loads(resp.read().decode("utf-8"))
-        except urllib.error.HTTPError as e:
-            detail = e.read().decode("utf-8", "replace")[:800]
-            raise RuntimeError("ComfyUI rejected the workflow, often because of a wrong model file "
-                               "name or a missing node. Details: " + detail)
-        prompt_id = out["prompt_id"]
-        _set_comfy_generation_state(
-            state="active", stage="queued", prompt_id=prompt_id,
-            message="Workflow accepted; waiting in ComfyUI queue",
-        )
+        if _image_backend(settings) == "runpod_serverless":
+            images = list(getattr(_SERVERLESS_UPLOADS, "images", []))
+            _SERVERLESS_UPLOADS.images = []
+            data, job_id = remote_runtime.runpod_serverless_image(
+                settings.get("image_runpod_endpoint_id"), secret_store.get_secret("runpod_api_key"),
+                workflow, images, timeout,
+                lambda stage, message: _set_comfy_generation_state(
+                    state="active", stage=stage, prompt_id=job_id if 'job_id' in locals() else None,
+                    message=message),
+            )
+            local = _new_name("png") + "_runpod.png"
+            dest = os.path.join(IMG_DIR, local)
+            with open(dest, "wb") as file:
+                file.write(data)
+            _set_comfy_generation_state(state="complete", stage="complete", prompt_id=job_id,
+                finished=time.time(), error=None, message="Image generation complete")
+            log.info("[image] Image saved: %s", dest)
+            return local
 
+        base = _comfy_base(settings)
+        client_id = uuid.uuid4().hex
+        payload = json.dumps({"prompt": workflow, "client_id": client_id}).encode("utf-8")
+        try:
+            with _comfy_request(base + "/prompt", settings, data=payload,
+                                headers={"Content-Type": "application/json"}, timeout=60) as response:
+                out = json.loads(response.read().decode("utf-8"))
+        except urllib.error.HTTPError as exc:
+            detail = exc.read().decode("utf-8", "replace")[:800]
+            raise RuntimeError("ComfyUI rejected the workflow, often because of a wrong model file name or a missing node. Details: " + detail)
+        prompt_id = out["prompt_id"]
+        _set_comfy_generation_state(state="active", stage="queued", prompt_id=prompt_id,
+                                    message="Workflow accepted; waiting in ComfyUI queue")
         deadline = time.time() + timeout
         history = None
         while time.time() < deadline:
             try:
-                # Queue polling provides useful live state without pretending to know a percent.
-                with urllib.request.urlopen(base + "/queue", timeout=5) as resp:
-                    queue = json.loads(resp.read().decode("utf-8"))
-                running_items = queue.get("queue_running", [])
-                pending_items = queue.get("queue_pending", [])
-                serialized_running = json.dumps(running_items, ensure_ascii=False)
-                serialized_pending = json.dumps(pending_items, ensure_ascii=False)
-                if prompt_id in serialized_running:
+                with _comfy_request(base + "/queue", settings, timeout=5) as response:
+                    queue = json.loads(response.read().decode("utf-8"))
+                running, pending = queue.get("queue_running", []), queue.get("queue_pending", [])
+                if prompt_id in json.dumps(running, ensure_ascii=False):
                     stage, message = "generating", "ComfyUI is generating the image"
-                elif prompt_id in serialized_pending:
+                elif prompt_id in json.dumps(pending, ensure_ascii=False):
                     stage, message = "queued", "Workflow is waiting in the ComfyUI queue"
                 else:
                     stage, message = "processing", "ComfyUI is finalizing the workflow"
-                _set_comfy_generation_state(
-                    state="active", stage=stage, prompt_id=prompt_id,
-                    queue_running=len(running_items), queue_pending=len(pending_items), message=message,
-                )
+                _set_comfy_generation_state(state="active", stage=stage, prompt_id=prompt_id,
+                    queue_running=len(running), queue_pending=len(pending), message=message)
             except Exception:
                 pass
-
             try:
-                with urllib.request.urlopen(base + "/history/" + prompt_id, timeout=30) as resp:
-                    h = json.loads(resp.read().decode("utf-8"))
-                if prompt_id in h and h[prompt_id].get("outputs"):
-                    history = h[prompt_id]
-                    break
+                with _comfy_request(base + "/history/" + prompt_id, settings, timeout=30) as response:
+                    history_payload = json.loads(response.read().decode("utf-8"))
+                if prompt_id in history_payload and history_payload[prompt_id].get("outputs"):
+                    history = history_payload[prompt_id]; break
             except urllib.error.URLError:
                 pass
             time.sleep(1.0)
         if not history:
-            raise RuntimeError("ComfyUI: timeout exceeded, no image produced (see the persistent logs/comfyui.log file).")
-
-        _set_comfy_generation_state(
-            state="active", stage="downloading", prompt_id=prompt_id,
-            message="Image generated; downloading result from ComfyUI",
-        )
+            raise RuntimeError("ComfyUI: timeout exceeded, no image produced.")
+        _set_comfy_generation_state(state="active", stage="downloading", prompt_id=prompt_id,
+                                    message="Image generated; downloading result from ComfyUI")
         for node_out in history["outputs"].values():
-            for img in node_out.get("images", []):
-                qs = urllib.parse.urlencode({
-                    "filename": img["filename"],
-                    "subfolder": img.get("subfolder", ""),
-                    "type": img.get("type", "output"),
-                })
-                with urllib.request.urlopen(base + "/view?" + qs, timeout=60) as resp:
-                    data = resp.read()
-                local = _new_name() + "_" + img["filename"]
-                dest_path = os.path.join(IMG_DIR, local)
-                try:
-                    with open(dest_path, "wb") as f:
-                        f.write(data)
-                except OSError as e:
-                    raise RuntimeError(
-                        f"ComfyUI: image generated but unable to copy it to {dest_path}: {e}"
-                    )
-                if not os.path.isfile(dest_path):
-                    raise RuntimeError(
-                        f"ComfyUI: copy to {dest_path} seemed to succeed but the file is missing."
-                    )
-                log.info("[comfy] Image saved: %s", dest_path)
-                _set_comfy_generation_state(
-                    state="complete", stage="complete", prompt_id=prompt_id,
-                    finished=time.time(), error=None, message="Image generation complete",
-                )
+            for image in node_out.get("images", []):
+                query = urllib.parse.urlencode({"filename": image["filename"],
+                    "subfolder": image.get("subfolder", ""), "type": image.get("type", "output")})
+                with _comfy_request(base + "/view?" + query, settings, timeout=60) as response:
+                    data = response.read()
+                local = _new_name() + "_" + image["filename"]
+                dest = os.path.join(IMG_DIR, local)
+                with open(dest, "wb") as file:
+                    file.write(data)
+                _set_comfy_generation_state(state="complete", stage="complete", prompt_id=prompt_id,
+                    finished=time.time(), error=None, message="Image generation complete")
+                log.info("[image] Image saved: %s", dest)
                 return local
         raise RuntimeError("ComfyUI: response received but no image was found.")
     except Exception as exc:
-        _set_comfy_generation_state(
-            state="error", stage="error", finished=time.time(), error=str(exc), message=str(exc),
-        )
+        _set_comfy_generation_state(state="error", stage="error", finished=time.time(),
+                                    error=str(exc), message=str(exc))
         raise
 
-
 def generate_t2i(prompt, settings, negative=None, seed=None, workflow=None, family=None):
-    with lmstudio_vram.vram_lock_for_image():
+    with _image_gpu_lock(settings):
         _unload_lmstudio_before_image(settings)
         with _LOCK:
             if settings.get("vram_mode", "swap") == "swap":
@@ -2038,7 +2098,7 @@ def generate_t2i(prompt, settings, negative=None, seed=None, workflow=None, fami
 
 
 def generate_i2i(prompt, init_image_filename, settings, negative=None, seed=None, workflow=None, family=None):
-    with lmstudio_vram.vram_lock_for_image():
+    with _image_gpu_lock(settings):
         _unload_lmstudio_before_image(settings)
         with _LOCK:
             if settings.get("vram_mode", "swap") == "swap":
@@ -2077,7 +2137,7 @@ def generate_group(prompt, image_list, settings, negative=None, seed=None, workf
     """Illustration multi-references. Workflows : duo (2 refs), trio (3 refs + fond optionnel),
     group4 (4 refs). Corrige FileNotFoundError : verifie chaque fichier avant upload."""
     import re as _re
-    with lmstudio_vram.vram_lock_for_image():
+    with _image_gpu_lock(settings):
         _unload_lmstudio_before_image(settings)
         with _LOCK:
             if settings.get("vram_mode", "swap") == "swap":

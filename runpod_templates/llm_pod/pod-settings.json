@@ -1,0 +1,16 @@
+{
+  "presetType": "human-readable Runpod Pod reference",
+  "exposeHttpPorts": [8000],
+  "persistentWorkspace": "/workspace",
+  "recommendedEnvironment": {
+    "MODEL_NAME": "REPLACE_WITH_MODEL",
+    "MAX_MODEL_LEN": "8192",
+    "GPU_MEMORY_UTILIZATION": "0.90"
+  },
+  "amioraiApiUrlPattern": "https://POD_ID-8000.proxy.runpod.net/v1",
+  "notes": [
+    "Do not lock the Pod if AmiorAI must stop it automatically.",
+    "A stopped Pod may continue to incur persistent-storage charges.",
+    "Verify the Runpod dashboard after crashes or network failures."
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "presetType": "human-readable Runpod Serverless reference",
+  "activeWorkers": 0,
+  "maxWorkers": 1,
+  "gpusPerWorker": 1,
+  "idleTimeoutSeconds": 900,
+  "executionTimeoutSeconds": 900,
+  "jobTtlSeconds": 1800,
+  "flashBoot": true,
+  "requestFormat": {
+    "input": {
+      "workflow": "ComfyUI API workflow object",
+      "images": [
+        {"name": "optional-reference.png", "image": "data:image/png;base64,..."}
+      ]
+    }
+  },
+  "notes": [
+    "Use a custom image when AmiorAI workflows require models or nodes missing from the stock worker.",
+    "Base64 reference images count toward Runpod request-size limits.",
+    "The 900 second idle timeout is billed warm time."
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "presetType": "human-readable Runpod Serverless reference",
+  "activeWorkers": 0,
+  "maxWorkers": 1,
+  "gpusPerWorker": 1,
+  "idleTimeoutSeconds": 900,
+  "executionTimeoutSeconds": 900,
+  "jobTtlSeconds": 1800,
+  "flashBoot": true,
+  "notes": [
+    "Active workers 0 avoids continuous GPU billing.",
+    "The 900 second idle timeout is billed warm time; reduce it for lower cost.",
+    "Choose GPU memory according to the selected model and context length."
+  ]
+}

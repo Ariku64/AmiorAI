@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  Version actuelle : <strong>v40.0.9</strong> · Windows 10/11 · Apache-2.0
+  Version actuelle : <strong>v40.1.0</strong> · Windows 10/11 · Apache-2.0
 </p>
 
 <p align="center">
@@ -26,14 +26,14 @@
 
 ## Qu’est-ce qu’AmiorAI ?
 
-AmiorAI est une application locale permettant de créer des personnages IA et de discuter avec eux au sein de conversations persistantes. Elle se connecte à des logiciels exécutés sur votre propre ordinateur :
+AmiorAI est une application local-first permettant de créer des personnages IA et de discuter avec eux au sein de conversations persistantes. Elle peut utiliser des moteurs exécutés sur votre ordinateur ou des moteurs distants configurés et payés directement par l’utilisateur :
 
-- **LM Studio** pour les modèles de conversation et les tâches utilitaires ;
-- **ComfyUI** pour les avatars, les scènes et le Studio Image ;
+- **LM Studio**, une API compatible OpenAI, Runpod Serverless ou un Pod Runpod personnel pour les modèles de conversation et les tâches utilitaires ;
+- **ComfyUI local/distant, Runpod Serverless ou un Pod Runpod personnel** pour les avatars, les scènes et le Studio Image ;
 - **Chatterbox Multilingual V3** comme moteur vocal local recommandé ;
 - **Qwen3-TTS 0.6B Base** comme moteur vocal expérimental facultatif.
 
-L’interface, les personnages, les conversations, les mémoires, les images et les réglages restent stockés localement. AmiorAI n’intègre aucun poids de modèle IA volumineux et ne nécessite aucun service cloud payant.
+L’interface, les personnages, la base des conversations, les mémoires, la galerie et les réglages restent stockés localement. Les moteurs locaux gardent les prompts sur le PC. Un moteur distant reçoit nécessairement les prompts, le contexte ou les images de référence requis par la tâche choisie. AmiorAI n’intègre aucun poids de modèle IA volumineux et n’impose aucun service cloud payant.
 
 > AmiorAI est un projet communautaire partagé gratuitement. Les modèles IA, LoRA, nœuds ComfyUI et logiciels externes conservent leurs propres licences et conditions d’utilisation.
 
@@ -41,28 +41,28 @@ L’interface, les personnages, les conversations, les mémoires, les images et 
 
 | Fonction | Description |
 |---|---|
-| Conversations locales | Connexion au serveur compatible OpenAI de LM Studio. |
+| Moteur de conversation flexible | LM Studio local, API compatible OpenAI, Runpod Serverless vLLM ou Pod Runpod personnel. |
 | Création de personnages | Trois créateurs séparés Réaliste, Anime et Cartoon, avec brouillons et aperçus indépendants. |
 | Paquets partageables | Export/import public des personnages avec fiche, avatar et visages d’humeur, ainsi que des scénarios portables. |
 | Mémoire persistante | Conservation des personnages et conversations entre les sessions. |
 | Affichage roleplay | Rendu distinct des dialogues, narrations et expressions. |
-| Génération d’images | Workflows Flux 2 Klein avec références et workflow unifié Krea 2. |
+| Moteur d’image flexible | ComfyUI local/distant, Runpod Serverless ComfyUI ou Pod Runpod personnel avec les workflows Flux 2 Klein et Krea 2. |
 | Gestion des LoRA | Dossiers locaux, classification, aperçus et attribution personnage/style. |
 | Studio Image | Prompts modifiables, choix des modèles, réglages du sampler et historique. |
-| Voix locale | Chatterbox par défaut et Qwen3-TTS comme option avancée. |
-| Gestion de la VRAM | Déchargement coordonné de TTS, LM Studio et ComfyUI. |
+| Voix locale | Chatterbox par défaut et Qwen3-TTS comme option avancée ; la voix reste locale en v40.1.0. |
+| Coordination VRAM et Pods | Déchargement local coordonné, démarrage des Pods personnels au premier appel et arrêt après 15 minutes d’inactivité par défaut. |
 | Interface mobile/LAN | Interface responsive pour un réseau local privé de confiance. |
 | Diagnostic | Vérification de LM Studio, de l’API ComfyUI tierce, des modèles, workflows et moteurs TTS. |
 | Interface multilingue | Français, anglais, espagnol et allemand. |
 
 ## Avant de télécharger
 
-AmiorAI est la couche applicative. Une installation locale complète demande généralement :
+AmiorAI est la couche applicative. Une installation complète demande :
 
 1. AmiorAI ;
-2. LM Studio et au moins un modèle chat/instruction compatible ;
-3. ComfyUI et des modèles d’image compatibles si vous souhaitez générer des images ;
-4. l’installateur Chatterbox ou Qwen si vous souhaitez utiliser la voix.
+2. soit LM Studio et un modèle local, soit un endpoint LLM compatible OpenAI/Runpod appartenant à l’utilisateur ;
+3. soit ComfyUI local/distant, soit un endpoint image Runpod personnel si vous souhaitez générer des images ;
+4. l’installateur local Chatterbox ou Qwen si vous souhaitez utiliser la voix.
 
 Aucun poids de modèle IA n’est inclus dans le dépôt Git ni dans l’archive de l’application.
 
@@ -130,7 +130,20 @@ http://127.0.0.1:8188
 
 > AmiorAI n’installe, ne lance, ne redémarre et n’arrête pas ComfyUI. Il communique uniquement avec l’instance tierce déjà démarrée via son API HTTP locale.
 
-### 6. Installer la voix locale, facultatif
+
+### 6. Fournisseurs distants facultatifs
+
+Les petites configurations peuvent utiliser un moteur appartenant à l’utilisateur sans acheter quoi que ce soit à AmiorAI. Dans **Réglages**, les moteurs de conversation et d’image se choisissent séparément :
+
+```text
+Conversation : LM Studio / compatible OpenAI / Runpod Serverless / Pod Runpod
+Images : ComfyUI local / ComfyUI distant / Runpod Serverless / Pod Runpod
+Voix : locale uniquement
+```
+
+AmiorAI ne crée aucun compte fournisseur, ne vend aucun crédit et ne touche aucune commission. Un Pod peut démarrer au premier appel et s’arrêter après 15 minutes d’inactivité par défaut. Un crash, une panne ou une coupure réseau peut empêcher l’ordre d’arrêt : vérifiez toujours le tableau de bord du fournisseur. Consultez [Fournisseurs distants et Runpod](docs/RUNPOD_REMOTE_PROVIDERS_FR.md).
+
+### 7. Installer la voix locale, facultatif
 
 Pour le moteur Chatterbox recommandé :
 
@@ -170,6 +183,8 @@ Pour effectuer un premier test complet :
 - [Documentation anglaise](README.md)
 - [Démarrage rapide](docs/QUICKSTART.md)
 - [Dépannage détaillé](docs/TROUBLESHOOTING.md)
+- [Fournisseurs distants et Runpod](docs/RUNPOD_REMOTE_PROVIDERS_FR.md)
+- [Kits de déploiement Runpod](runpod_templates/README_FR.md)
 - [Journal des modifications](docs/CHANGELOG.md)
 - [Avertissement légal](LEGAL_NOTICE.md)
 - [Licences tierces](THIRD_PARTY_NOTICES.md)
@@ -184,8 +199,8 @@ Pour effectuer un premier test complet :
 
 - Windows 10 ou Windows 11 64 bits ;
 - un dossier d’installation accessible en écriture ;
-- assez d’espace disque pour l’application et les modèles externes ;
-- LM Studio avec au moins un modèle chat/instruction.
+- assez d’espace disque pour l’application et les fichiers locaux ;
+- soit LM Studio avec un modèle chat/instruction, soit un endpoint LLM distant compatible appartenant à l’utilisateur.
 
 ### Recommandé pour les images et la voix
 
@@ -276,6 +291,23 @@ http://127.0.0.1:8188
 6. Sauvegardez la section puis lancez **Diagnostic**.
 
 AmiorAI ne télécharge, n’installe, ne démarre, ne redémarre, n’arrête et ne met jamais à jour ComfyUI. Les arguments de lancement, l’environnement Python et les mises à jour restent gérés par l’installation ComfyUI externe.
+
+
+## 4 bis. Configurer les fournisseurs distants facultatifs
+
+Le fournisseur de conversation et le fournisseur d’image sont indépendants. Un mode hybride privé courant conserve LM Studio et la mémoire en local tout en utilisant Runpod uniquement pour les images. Un fournisseur générique demande une URL API et éventuellement une clé de service. Runpod Serverless demande l’Endpoint ID et la clé Runpod de l’utilisateur. Un Pod demande en plus le Pod ID et l’URL publique du proxy.
+
+Les clés Runpod et les clés de service distantes restent hors de la base SQLite AmiorAI et utilisent le gestionnaire de secrets du système lorsqu’il est disponible. Les commandes cloud sont réservées au PC hôte et ne sont pas accessibles depuis un client LAN.
+
+Pour un Pod, AmiorAI peut :
+
+1. vérifier son état ;
+2. le démarrer au premier appel ;
+3. attendre que l’API configurée réponde ;
+4. exécuter la tâche ;
+5. l’arrêter après 15 minutes d’inactivité par défaut.
+
+Un crash brutal ou une coupure réseau peut empêcher la dernière commande Stop. Vérifiez toujours le tableau de bord Runpod. Le guide complet et les quatre kits de référence sont disponibles dans [Fournisseurs distants et Runpod](docs/RUNPOD_REMOTE_PROVIDERS_FR.md) et [`runpod_templates`](runpod_templates/README_FR.md).
 
 ## 5. Modèles d’image
 

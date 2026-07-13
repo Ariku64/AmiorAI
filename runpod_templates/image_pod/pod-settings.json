@@ -1,0 +1,12 @@
+{
+  "presetType": "human-readable Runpod Pod reference",
+  "exposeHttpPorts": [8188],
+  "persistentWorkspace": "/workspace",
+  "amioraiApiUrlPattern": "https://POD_ID-8188.proxy.runpod.net",
+  "notes": [
+    "ComfyUI must listen on 0.0.0.0, not only 127.0.0.1.",
+    "Keep model names and custom-node versions aligned with AmiorAI workflows.",
+    "Do not lock the Pod if AmiorAI must stop it automatically.",
+    "Verify the Runpod dashboard after crashes or network failures."
+  ]
+}

@@ -6,8 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>AmiorAI</title>
   <link rel="icon" type="image/png" href="/logo-icon-square.png">
-  <link rel="stylesheet" href="/style.css?v=40.0.9">
-  <link rel="stylesheet" href="/icons.css?v=40.0.9">
+  <link rel="stylesheet" href="/style.css?v=40.1.0">
+  <link rel="stylesheet" href="/icons.css?v=40.1.0">
   <script>
     // Applique le theme AVANT le premier rendu (evite un flash de mauvais theme).
     // "system" = pas d'attribut data-theme : le CSS suit alors prefers-color-scheme
@@ -88,7 +88,7 @@
       </select>
       <small data-i18n="image.global_engine_hint">Used by characters, chat, previews, emotions, groups and Image Studio.</small>
     </div>
-    <div class="foot"><span data-i18n="footer.local">100% local — LM Studio + ComfyUI</span></div>
+    <div class="foot"><span data-i18n="footer.local">Local-first — local or user-owned AI engines</span></div>
   </aside>
 
   <main class="main">
@@ -816,7 +816,7 @@
     <!-- ============ SETTINGS ============ -->
     <section id="view-settings" class="view">
       <h1 data-i18n="settings.title">Settings</h1>
-      <p class="sub" data-i18n="settings.sub">One program loads your LLM and image model. Everything stays on your machine.</p>
+      <p class="sub" data-i18n="settings.sub">Choose local engines or connect services you own. Companion data stays local; remote providers receive only requests sent to them.</p>
 
       <div class="panel">
         <h2 data-i18n="settings.appearance_title">Appearance</h2>
@@ -921,8 +921,14 @@
 
       <div class="panel">
         <h2 data-i18n="settings.llm_title">Moteur de langage</h2>
-        <input type="hidden" id="s-llm_backend" value="lmstudio">
-        <p class="hint" data-i18n="settings.lmstudio_only_hint">AmiorAI uses LM Studio exclusively for the conversation and utility models.</p>
+        <p class="hint" data-i18n="settings.providers_privacy_hint">Local mode keeps prompts on this PC. Remote modes send only the data required for the selected task to the provider configured by the user.</p>
+        <label for="s-llm_backend" data-i18n="settings.llm_provider_label">Conversation provider</label>
+        <select id="s-llm_backend">
+          <option value="lmstudio" data-i18n="settings.llm_provider_lmstudio_opt">LM Studio — local</option>
+          <option value="openai_compatible" data-i18n="settings.llm_provider_openai_opt">OpenAI-compatible API — user-owned</option>
+          <option value="runpod_serverless" data-i18n="settings.llm_provider_serverless_opt">Runpod Serverless — vLLM</option>
+          <option value="runpod_pod" data-i18n="settings.llm_provider_pod_opt">Runpod Pod — vLLM</option>
+        </select>
 
         <div id="llm-backend-status" class="row" style="gap:10px; margin:8px 0; align-items:center;"></div>
         <div class="row" style="gap:8px; margin-bottom:10px;">
@@ -943,7 +949,7 @@
             <span class="hint">32768</span>
           </div>
           <p class="hint" id="llm-context-backend-note" style="margin-top:6px;"></p>
-          <p class="hint" data-i18n="settings.llm_context_hint1">Cette valeur doit rester égale ou inférieure au contexte réellement configuré pour le modèle dans LM Studio.</p>
+          <p class="hint" data-i18n="settings.llm_context_hint1">Cette valeur doit rester égale ou inférieure au contexte réellement configuré pour le modèle chez le fournisseur sélectionné.</p>
           <div class="row" style="gap:8px; margin-top:8px; align-items:center;">
             <button class="btn sm" id="llm-context-save-btn" data-i18n="settings.llm_context_save_btn">Enregistrer le contexte</button>
             <span id="llm-context-status" class="hint"></span>
@@ -955,19 +961,19 @@
         </div>
 
         <div id="llm-lmstudio-fields" style="display:block; border-left:2px solid var(--accent-soft); padding-left:12px; margin-top:8px;">
-          <label>LM Studio server URL</label>
+          <label data-i18n="settings.llm_local_url_label">LM Studio server URL</label>
           <input id="s-lmstudio_url" placeholder="http://127.0.0.1:1234/v1">
           <div class="row" style="gap:8px; align-items:end; flex-wrap:wrap;">
             <div style="flex:1; min-width:260px;">
-              <label>Conversation model</label>
-              <select id="s-lmstudio_model"><option value="">— auto / only loaded model —</option></select>
+              <label data-i18n="settings.llm_conversation_model_label">Conversation model</label>
+              <select id="s-lmstudio_model"><option value="" data-i18n="settings.model_auto_placeholder">— auto / only loaded model —</option></select>
             </div>
-            <button class="btn sm ghost" id="lmstudio-refresh-models-btn" type="button">Refresh model list</button>
+            <button class="btn sm ghost" id="lmstudio-refresh-models-btn" type="button" data-i18n="settings.llm_refresh_models_btn">Refresh model list</button>
           </div>
           <p id="lmstudio-model-list-status" class="hint" style="margin-top:4px;"></p>
           <label data-i18n="settings.util_key_label">Clé API (optionnelle)</label>
           <input id="s-lmstudio_api_key" placeholder="optional">
-          <p class="hint">Lance LM Studio, charge un modèle, démarre son serveur local (bouton « Start Server »), puis clique « Tester » ci-dessus.</p>
+          <p class="hint" data-i18n="settings.llm_local_start_hint">Lance LM Studio, charge un modèle, démarre son serveur local, puis clique « Tester » ci-dessus.</p>
 
           <h3 style="margin-top:16px; font-size:14px;">LM Studio VRAM management</h3>
           <p class="hint">Before image generation, AmiorAI can unload from LM Studio only the models it configured itself (chat model and, if the utility model points to the same server, the utility model too), then reload only the model needed by the next text request. Other models loaded in LM Studio are never touched.</p>
@@ -1017,6 +1023,40 @@
             <span id="lmstudio-vram-unload-result" class="hint"></span>
           </div>
         </div>
+
+        <div id="llm-openai-fields" style="display:none; border-left:2px solid var(--accent-soft); padding-left:12px; margin-top:12px;">
+          <label data-i18n="settings.llm_remote_url_label">OpenAI-compatible API URL</label>
+          <input id="s-llm_remote_url" placeholder="https://your-server.example/v1">
+          <label data-i18n="settings.llm_remote_model_label">Conversation model ID</label>
+          <select id="s-llm_remote_model"><option value="" data-i18n="settings.model_detect_placeholder">— detect / select model —</option></select>
+          <label data-i18n="settings.remote_api_key_label">Service API key (optional)</label>
+          <input id="s-llm_remote_api_key" type="password" autocomplete="new-password" placeholder="Leave blank to keep the saved key" data-i18n-placeholder="settings.secret_keep_placeholder">
+          <p id="llm-remote-key-status" class="hint"></p>
+        </div>
+
+        <div id="llm-serverless-fields" style="display:none; border-left:2px solid var(--accent-soft); padding-left:12px; margin-top:12px;">
+          <label data-i18n="settings.serverless_endpoint_label">Runpod Serverless Endpoint ID</label>
+          <input id="s-llm_runpod_endpoint_id" placeholder="endpoint-id">
+          <label data-i18n="settings.llm_serverless_model_label">Conversation model ID exposed by vLLM</label>
+          <select id="s-llm_remote_model-serverless"><option value="" data-i18n="settings.model_detect_placeholder">— detect / select model —</option></select>
+          <p class="hint" data-i18n="settings.llm_serverless_hint">The endpoint starts its own Flex worker on demand. Recommended endpoint preset: minimum workers 0 and idle timeout 900 seconds.</p>
+        </div>
+
+        <div id="llm-pod-fields" style="display:none; border-left:2px solid var(--accent-soft); padding-left:12px; margin-top:12px;">
+          <label data-i18n="settings.runpod_pod_id_label">Runpod Pod ID</label>
+          <input id="s-llm_runpod_pod_id" placeholder="pod-id">
+          <label data-i18n="settings.llm_pod_url_label">Pod OpenAI-compatible API URL</label>
+          <input id="s-llm_runpod_pod_url" placeholder="https://.../v1">
+          <label data-i18n="settings.llm_remote_model_label">Conversation model ID</label>
+          <select id="s-llm_remote_model-pod"><option value="" data-i18n="settings.model_detect_placeholder">— detect / select model —</option></select>
+          <label data-i18n="settings.pod_start_timeout_label">Maximum Pod startup wait (seconds)</label>
+          <input id="s-llm_runpod_start_timeout" type="number" min="30" max="3600" step="30" value="900">
+          <div class="row" style="gap:8px; margin-top:10px;">
+            <button type="button" class="btn sm" id="llm-pod-start" data-i18n="settings.llm_pod_start_btn">Start LLM Pod</button>
+            <button type="button" class="btn sm ghost" id="llm-pod-stop" data-i18n="settings.llm_pod_stop_btn">Stop LLM Pod</button>
+            <span id="llm-pod-status" class="hint"></span>
+          </div>
+        </div>
         <div class="row settings-section-save-row" style="margin-top:16px; gap:8px; align-items:center;">
           <button type="button" class="btn settings-section-save" data-i18n="settings.save_section_btn">Save this section</button>
           <span class="hint settings-section-status" aria-live="polite"></span>
@@ -1032,10 +1072,10 @@
           <option value="true" data-i18n="settings.util_enabled_opt">Oui — tâches structurées sur un modèle dédié</option>
         </select>
         <div class="row" style="gap:14px; margin-top:8px;">
-          <div style="flex:1; min-width:220px;"><label data-i18n="settings.util_model_label">LM Studio utility model</label>
-            <select id="s-llm_util_model"><option value="">— reuse conversation model —</option></select></div>
+          <div style="flex:1; min-width:220px;"><label data-i18n="settings.util_model_label">Utility model ID</label>
+            <select id="s-llm_util_model"><option value="" data-i18n="settings.util_reuse_placeholder">— reuse conversation model —</option></select></div>
         </div>
-        <p class="hint" data-i18n="settings.util_same_server_hint">The utility model uses the same LM Studio server URL and API key as the conversation model.</p>
+        <p class="hint" data-i18n="settings.util_same_server_hint">The utility model uses the same selected provider and credentials as the conversation model.</p>
 
         <label class="row" style="gap:8px; align-items:center; margin-top:14px;">
           <input type="checkbox" id="s-llm_util_fallback" style="width:auto;">
@@ -1117,8 +1157,8 @@
         </details>
         <div class="row" style="margin-top:12px; gap:8px;">
           <button class="btn sm" id="tts-start-btn" data-i18n="settings.tts_start_btn">Démarrer le serveur TTS</button>
-          <button class="btn sm ghost" id="tts-restart-btn" data-i18n="system.comfy_restart_btn">Redémarrer</button>
-          <button class="btn sm danger" id="tts-kill-btn" data-i18n="system.comfy_stop_btn">Arrêter</button>
+          <button class="btn sm ghost" id="tts-restart-btn" data-i18n="settings.tts_restart_btn">Redémarrer</button>
+          <button class="btn sm danger" id="tts-kill-btn" data-i18n="settings.tts_kill_btn">Arrêter</button>
           <span id="tts-status-line" class="hint"></span>
         </div>
         <p class="hint" data-i18n="settings.tts_install_hint">Installation : lance tts_server/install.bat pour Chatterbox. Lance tts_server/install_qwen.bat seulement pour ajouter l'option Qwen. Les poids sont téléchargés au premier démarrage.</p>
@@ -1159,10 +1199,44 @@
       </div>
 
       <div class="panel">
-        <h2 data-i18n="settings.comfy_title">Connexion ComfyUI tiers</h2>
-        <p class="hint" data-i18n="settings.comfy_hint">AmiorAI se connecte uniquement à une installation ComfyUI tierce déjà démarrée. Il ne l’installe, ne la lance et ne l’arrête jamais.</p>
-        <label data-i18n="settings.comfy_url_label">Adresse API de ComfyUI</label>
-        <input id="s-comfy_url" placeholder="http://127.0.0.1:8188">
+        <h2 data-i18n="settings.comfy_title">Image generation provider</h2>
+        <p class="hint" data-i18n="settings.image_provider_hint">Choose local ComfyUI, a remote ComfyUI-compatible server, Runpod Serverless, or a user-owned Runpod Pod.</p>
+        <label for="s-image_backend" data-i18n="settings.image_provider_label">Image provider</label>
+        <select id="s-image_backend">
+          <option value="comfy_local" data-i18n="settings.image_provider_local_opt">ComfyUI — local</option>
+          <option value="comfy_remote" data-i18n="settings.image_provider_remote_opt">ComfyUI — remote API</option>
+          <option value="runpod_serverless" data-i18n="settings.image_provider_serverless_opt">Runpod Serverless — ComfyUI worker</option>
+          <option value="runpod_pod" data-i18n="settings.image_provider_pod_opt">Runpod Pod — ComfyUI</option>
+        </select>
+        <div id="image-local-fields" style="margin-top:10px;">
+          <label data-i18n="settings.comfy_url_label">Local ComfyUI API URL</label>
+          <input id="s-comfy_url" placeholder="http://127.0.0.1:8188">
+        </div>
+        <div id="image-remote-fields" style="display:none; margin-top:10px;">
+          <label data-i18n="settings.image_remote_url_label">Remote ComfyUI API URL</label>
+          <input id="s-image_remote_url" placeholder="https://your-comfy.example">
+          <label data-i18n="settings.remote_api_key_label">Service API key (optional)</label>
+          <input id="s-image_remote_api_key" type="password" autocomplete="new-password" placeholder="Leave blank to keep the saved key" data-i18n-placeholder="settings.secret_keep_placeholder">
+          <p id="image-remote-key-status" class="hint"></p>
+        </div>
+        <div id="image-serverless-fields" style="display:none; margin-top:10px;">
+          <label data-i18n="settings.serverless_endpoint_label">Runpod Serverless Endpoint ID</label>
+          <input id="s-image_runpod_endpoint_id" placeholder="endpoint-id">
+          <p class="hint" data-i18n="settings.image_serverless_hint">Uses the AmiorAI ComfyUI request format: workflow plus optional reference images. The endpoint starts on the first generation.</p>
+        </div>
+        <div id="image-pod-fields" style="display:none; margin-top:10px;">
+          <label data-i18n="settings.runpod_pod_id_label">Runpod Pod ID</label>
+          <input id="s-image_runpod_pod_id" placeholder="pod-id">
+          <label data-i18n="settings.image_pod_url_label">Pod ComfyUI API URL</label>
+          <input id="s-image_runpod_pod_url" placeholder="https://...">
+          <label data-i18n="settings.pod_start_timeout_label">Maximum Pod startup wait (seconds)</label>
+          <input id="s-image_runpod_start_timeout" type="number" min="30" max="3600" step="30" value="900">
+          <div class="row" style="gap:8px; margin-top:10px;">
+            <button type="button" class="btn sm" id="image-pod-start" data-i18n="settings.image_pod_start_btn">Start Image Pod</button>
+            <button type="button" class="btn sm ghost" id="image-pod-stop" data-i18n="settings.image_pod_stop_btn">Stop Image Pod</button>
+            <span id="image-pod-status" class="hint"></span>
+          </div>
+        </div>
 
         <h3 style="margin-top:16px; font-size:14px;" data-i18n="settings.comfy_resolution_title">Résolution de génération</h3>
         <select id="s-image_resolution">
@@ -1172,7 +1246,7 @@
           <option value="1344x768">Paysage 16:9 — 1344×768</option>
           <option value="1216x832">Paysage 3:2 — 1216×832</option>
         </select>
-        <p class="hint">Applies to all generations except previews (fixed 512×512). Duo/Trio/Group use their own workflow-defined resolution.</p>
+        <p class="hint" data-i18n="settings.image_resolution_hint">Applies to all generations except previews (fixed 512×512). Duo/Trio/Group use their own workflow-defined resolution.</p>
 
         <label style="margin-top:16px;" data-i18n="settings.comfy_negative_label">Prompt négatif par défaut (laisse vide pour FLUX.2)</label>
         <textarea id="s-default_negative"></textarea>
@@ -1211,6 +1285,27 @@
         <div class="row" style="margin-top:14px;">
           <button class="btn ghost" onclick="switchView('studio')" data-i18n="settings.comfy_goto_studio_btn">🎛️ Aller à Studio Image →</button>
         </div>
+        <div class="row settings-section-save-row" style="margin-top:16px; gap:8px; align-items:center;">
+          <button type="button" class="btn settings-section-save" data-i18n="settings.save_section_btn">Save this section</button>
+          <span class="hint settings-section-status" aria-live="polite"></span>
+        </div>
+      </div>
+
+      <div class="panel" id="runpod-policy-panel">
+        <h2 data-i18n="settings.runpod_title">Runpod account and Pod policy</h2>
+        <p class="hint" data-i18n="settings.runpod_hint">AmiorAI never sells compute or credits. This key controls only the Runpod account owned and billed directly to you.</p>
+        <label data-i18n="settings.runpod_api_key_label">Runpod API key</label>
+        <input id="s-runpod_api_key" type="password" autocomplete="new-password" placeholder="Leave blank to keep the saved key" data-i18n-placeholder="settings.secret_keep_placeholder">
+        <p id="runpod-key-status" class="hint"></p>
+        <label class="row" style="gap:8px; align-items:center; margin-top:10px;">
+          <input type="checkbox" id="s-runpod_auto_stop" style="width:auto;" checked>
+          <span data-i18n="settings.runpod_auto_stop_label">Automatically stop a Pod after inactivity</span>
+        </label>
+        <div style="max-width:260px; margin-top:8px;">
+          <label data-i18n="settings.runpod_idle_label">Inactivity delay (minutes)</label>
+          <input id="s-runpod_idle_minutes" type="number" min="1" max="120" step="1" value="15">
+        </div>
+        <p class="hint" data-i18n="settings.runpod_auto_stop_hint">The countdown starts after the last completed request. Active text generation, image generation, upload, or download prevents automatic stop. A crash or power loss cannot guarantee the stop command; verify the Runpod dashboard.</p>
         <div class="row settings-section-save-row" style="margin-top:16px; gap:8px; align-items:center;">
           <button type="button" class="btn settings-section-save" data-i18n="settings.save_section_btn">Save this section</button>
           <span class="hint settings-section-status" aria-live="polite"></span>
@@ -1315,7 +1410,7 @@
   </main>
 
   <div id="modal-root"></div>
-  <script src="/icons.js?v=40.0.9"></script>
-  <script src="/app.js?v=40.0.9"></script>
+  <script src="/icons.js?v=40.1.0"></script>
+  <script src="/app.js?v=40.1.0"></script>
 </body>
 </html>
